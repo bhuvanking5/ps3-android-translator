@@ -17,10 +17,13 @@ class TranslatorTests(unittest.TestCase):
             "    add x3, x4, #10"
         )
 
+    
     def test_addi_zero_base(self):
         self.assertEqual(
             translate("addi r3, r0, 7"),
-            "    add x3, xzr, #7"
+            "    mov x3, #7"
+        )
+        
         Update zero-base instruction test
 
     def test_add(self):
