@@ -46,7 +46,7 @@ class ProgramBranchTests(unittest.TestCase):
         with self.assertRaisesRegex(
             RuntimeError, "Maximum instruction step count"
         ):
-            run_program(cpu, [0x4BFFFFFC], max_steps=5)
+            run_program(cpu, [0x48000000], max_steps=5)
 
 
 if __name__ == "__main__":
