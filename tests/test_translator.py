@@ -23,8 +23,7 @@ class TranslatorTests(unittest.TestCase):
             translate("addi r3, r0, 7"),
             "    mov x3, #7"
         )
-        
-        Update zero-base instruction test
+
 
     def test_add(self):
         self.assertEqual(
