@@ -4,7 +4,10 @@ import sys
 import unittest
 
 sys.path.insert(
-    0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    0,
+    os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..")
+    ),
 )
 
 from prototype.ppc_decoder import decode_word, decode_bytes
@@ -12,32 +15,6 @@ from prototype.ppc_decoder import decode_word, decode_bytes
 
 class DecoderTests(unittest.TestCase):
 
-    def test_decode_branch_positive_displacement(self):
-        word = (18 << 26) | 16
-        result = decode_word(word)
-
-        self.assertEqual(result["mnemonic"], "b")
-        self.assertEqual(result["displacement"], 16)
-        self.assertFalse(result["absolute"])
-        self.assertFalse(result["link"])
-
-    def test_decode_branch_negative_displacement(self):
-        encoded_li = (-16 >> 2) & 0x00FFFFFF
-        word = (18 << 26) | (encoded_li << 2)
-
-        result = decode_word(word)
-
-        self.assertEqual(result["mnemonic"], "b")
-        self.assertEqual(result["displacement"], -16)
-
-    def test_decode_branch_absolute_and_link_flags(self):
-        word = (18 << 26) | 0x3
-        result = decode_word(word)
-
-        self.assertEqual(result["displacement"], 0)
-        self.assertTrue(result["absolute"])
-        self.assertTrue(result["link"])
-        
     def test_decode_addi(self):
         word = (14 << 26) | (3 << 21) | (4 << 16) | 10
         result = decode_word(word)
@@ -49,7 +26,9 @@ class DecoderTests(unittest.TestCase):
 
     def test_decode_negative_immediate(self):
         word = (14 << 26) | (3 << 21) | (4 << 16) | 0xFFFC
-        self.assertEqual(decode_word(word)["immediate"], -4)
+        result = decode_word(word)
+
+        self.assertEqual(result["immediate"], -4)
 
     def test_decode_add(self):
         word = (
@@ -67,14 +46,52 @@ class DecoderTests(unittest.TestCase):
         self.assertEqual(result["rb"], 5)
         self.assertFalse(result["record"])
 
+    def test_decode_branch_positive_displacement(self):
+        word = (18 << 26) | 16
+        result = decode_word(word)
+
+        self.assertEqual(result["mnemonic"], "b")
+        self.assertEqual(result["displacement"], 16)
+        self.assertFalse(result["absolute"])
+        self.assertFalse(result["link"])
+
+    def test_decode_branch_negative_displacement(self):
+        encoded_li = (-16 >> 2) & 0x00FFFFFF
+        word = (18 << 26) | (encoded_li << 2)
+        result = decode_word(word)
+
+        self.assertEqual(result["mnemonic"], "b")
+        self.assertEqual(result["displacement"], -16)
+
+    def test_decode_branch_absolute_and_link_flags(self):
+        word = (18 << 26) | 0x3
+        result = decode_word(word)
+
+        self.assertEqual(result["mnemonic"], "b")
+        self.assertEqual(result["displacement"], 0)
+        self.assertTrue(result["absolute"])
+        self.assertTrue(result["link"])
+
     def test_decode_big_endian_bytes(self):
         word = (14 << 26) | (3 << 21) | (4 << 16) | 10
         result = decode_bytes(word.to_bytes(4, "big"))
+
         self.assertEqual(result["immediate"], 10)
+
+    def test_decode_branch_from_bytes(self):
+        word = (18 << 26) | 16
+        result = decode_bytes(word.to_bytes(4, "big"))
+
+        self.assertEqual(result["mnemonic"], "b")
+        self.assertEqual(result["displacement"], 16)
 
     def test_wrong_byte_length(self):
         with self.assertRaises(ValueError):
             decode_bytes(b"\x00\x00")
+
+    def test_wrong_byte_type(self):
+        with self.assertRaises(ValueError):
+            decode_bytes("abcd")
 
     def test_unsupported_instruction(self):
         with self.assertRaises(ValueError):
@@ -84,7 +101,19 @@ class DecoderTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             decode_word(0x100000000)
 
+    def test_negative_word(self):
+        with self.assertRaises(ValueError):
+            decode_word(-1)
+
+    def test_non_integer_word(self):
+        with self.assertRaises(ValueError):
+            decode_word("123")
+
+    def test_boolean_is_not_an_instruction(self):
+        with self.assertRaises(ValueError):
+            decode_word(True)
+
 
 if __name__ == "__main__":
     unittest.main()
-      
+    
