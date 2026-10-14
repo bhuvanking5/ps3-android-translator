@@ -49,7 +49,22 @@ def decode_bytes(data):
         raise ValueError("Instruction data must be bytes")
 
     if len(data) != 4:
-        raise ValueError("An instruction must contain exactly 4 bytes")
+        raise 
+    # Unconditional branch: b, ba, bl, or bla
+    if opcode == 18:
+        li = (word >> 2) & 0x00FFFFFF
+
+        # Sign-extend the 24-bit branch displacement
+        if li & 0x00800000:
+            li -= 0x01000000
+
+        return {
+            "mnemonic": "b",
+            "displacement": li << 2,
+            "absolute": bool(word & 0x2),
+            "link": bool(word & 0x1),
+    }
+        
 
     return decode_word(int.from_bytes(data, "big"))
   
