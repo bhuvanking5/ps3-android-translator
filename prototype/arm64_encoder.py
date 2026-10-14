@@ -44,13 +44,37 @@ def encode_instruction(assembly):
     mnemonic, operand_text = parts
     operands = [item.strip() for item in operand_text.split(",")]
 
+    # Unconditional branch with a signed byte offset from this instruction.
+    if mnemonic == "b" and len(operands) == 1:
+        offset_text = operands[0]
+
+        if not offset_text.startswith("#"):
+            raise ValueError("Branch offset must begin with '#'")
+
+        try:
+            offset = int(offset_text[1:], 0)
+        except ValueError as exc:
+            raise ValueError("Invalid branch offset") from exc
+
+        if offset % 4 != 0:
+            raise ValueError("Branch offset must be 4-byte aligned")
+
+        if not -(1 << 27) <= offset <= (1 << 27) - 4:
+            raise ValueError("Branch offset outside AArch64 B range")
+
+        return 0x14000000 | ((offset >> 2) & 0x03FFFFFF)
+
+    # ADD/SUB immediate or ADD register.
     if mnemonic in ("add", "sub") and len(operands) == 3:
         rd = _register(operands[0])
         rn = _register(operands[1])
 
         if operands[2].startswith("#"):
             imm = _immediate(operands[2])
-            base = 0x91000000 if mnemonic == "add" else 0xD1000000
+            base = (
+                0x91000000 if mnemonic == "add"
+                else 0xD1000000
+            )
             return base | (imm << 10) | (rn << 5) | rd
 
         rm = _register(operands[2])
@@ -60,6 +84,7 @@ def encode_instruction(assembly):
 
         raise ValueError("Register-form SUB is not supported yet")
 
+    # MOV immediate or MOV register.
     if mnemonic == "mov" and len(operands) == 2:
         rd = _register(operands[0])
 
@@ -71,9 +96,7 @@ def encode_instruction(assembly):
         # MOV Xd, Xm is an alias of ORR Xd, XZR, Xm.
         return 0xAA0003E0 | (rm << 16) | rd
 
-    raise ValueError(
-        f"Unsupported ARM64 instruction: {assembly}"
-    )
+    raise ValueError(f"Unsupported ARM64 instruction: {assembly}")
 
 
 def encode_bytes(assembly):
@@ -98,4 +121,4 @@ def encode_program(instructions):
             ) from exc
 
     return bytes(output)
-          
+        
