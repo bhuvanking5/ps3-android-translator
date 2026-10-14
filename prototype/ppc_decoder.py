@@ -1,6 +1,7 @@
 
 """Decode a small subset of 32-bit PowerPC instructions."""
 
+
 def decode_word(word):
     """Decode one PowerPC instruction represented as a 32-bit integer."""
     if not isinstance(word, int) or isinstance(word, bool):
@@ -11,7 +12,7 @@ def decode_word(word):
 
     opcode = (word >> 26) & 0x3F
 
-    # addi RT, RA, SI — opcode 14, signed 16-bit immediate
+    # addi RT, RA, SI — opcode 14
     if opcode == 14:
         rt = (word >> 21) & 0x1F
         ra = (word >> 16) & 0x1F
@@ -27,6 +28,20 @@ def decode_word(word):
             "immediate": immediate,
         }
 
+    # Unconditional branch: b, ba, bl, or bla
+    if opcode == 18:
+        li = (word >> 2) & 0x00FFFFFF
+
+        if li & 0x00800000:
+            li -= 0x01000000
+
+        return {
+            "mnemonic": "b",
+            "displacement": li << 2,
+            "absolute": bool(word & 0x2),
+            "link": bool(word & 0x1),
+        }
+
     # add RT, RA, RB — extended opcode 266
     if opcode == 31:
         extended_opcode = (word >> 1) & 0x3FF
@@ -40,7 +55,9 @@ def decode_word(word):
                 "record": bool(word & 1),
             }
 
-    raise ValueError(f"Unsupported PowerPC instruction: 0x{word:08X}")
+    raise ValueError(
+        f"Unsupported PowerPC instruction: 0x{word:08X}"
+    )
 
 
 def decode_bytes(data):
@@ -49,22 +66,7 @@ def decode_bytes(data):
         raise ValueError("Instruction data must be bytes")
 
     if len(data) != 4:
-        raise 
-    # Unconditional branch: b, ba, bl, or bla
-    if opcode == 18:
-        li = (word >> 2) & 0x00FFFFFF
-
-        # Sign-extend the 24-bit branch displacement
-        if li & 0x00800000:
-            li -= 0x01000000
-
-        return {
-            "mnemonic": "b",
-            "displacement": li << 2,
-            "absolute": bool(word & 0x2),
-            "link": bool(word & 0x1),
-    }
-        
+        raise ValueError("An instruction must contain exactly 4 bytes")
 
     return decode_word(int.from_bytes(data, "big"))
-  
+                
