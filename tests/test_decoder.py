@@ -12,6 +12,32 @@ from prototype.ppc_decoder import decode_word, decode_bytes
 
 class DecoderTests(unittest.TestCase):
 
+    def test_decode_branch_positive_displacement(self):
+        word = (18 << 26) | 16
+        result = decode_word(word)
+
+        self.assertEqual(result["mnemonic"], "b")
+        self.assertEqual(result["displacement"], 16)
+        self.assertFalse(result["absolute"])
+        self.assertFalse(result["link"])
+
+    def test_decode_branch_negative_displacement(self):
+        encoded_li = (-16 >> 2) & 0x00FFFFFF
+        word = (18 << 26) | (encoded_li << 2)
+
+        result = decode_word(word)
+
+        self.assertEqual(result["mnemonic"], "b")
+        self.assertEqual(result["displacement"], -16)
+
+    def test_decode_branch_absolute_and_link_flags(self):
+        word = (18 << 26) | 0x3
+        result = decode_word(word)
+
+        self.assertEqual(result["displacement"], 0)
+        self.assertTrue(result["absolute"])
+        self.assertTrue(result["link"])
+        
     def test_decode_addi(self):
         word = (14 << 26) | (3 << 21) | (4 << 16) | 10
         result = decode_word(word)
