@@ -24,3 +24,14 @@ if(PS3_TRANSLATOR_BUILD_PYTHON_BINDING)
   target_include_directories(ps3_native PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/native")
   target_compile_options(ps3_native PRIVATE -Wall -Wextra -Werror)
 endif()
+
+if(PS3_TRANSLATOR_BUILD_PYTHON_BINDING)
+  add_test(
+    NAME python_native_binding_smoke
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_native_binding.py
+  )
+  set_tests_properties(
+    python_native_binding_smoke
+    PROPERTIES ENVIRONMENT "PYTHONPATH=$<TARGET_FILE_DIR:ps3_native>"
+  )
+endif()
