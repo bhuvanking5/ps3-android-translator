@@ -21,4 +21,10 @@ jobs:
 
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
-        
+
+      - name: Compile native ARM64 runtime
+        run: |
+          cc -std=c11 -Wall -Wextra -Werror -D_DEFAULT_SOURCE \
+            native/arm64_runtime.c native/test_arm64_runtime.c \
+            -o /tmp/test_arm64_runtime
+          /tmp/test_arm64_runtime
