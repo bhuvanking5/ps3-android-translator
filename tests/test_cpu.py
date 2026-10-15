@@ -30,6 +30,17 @@ def make_add(rt, ra, rb):
     )
 
 
+def make_conditional_branch(bo, bi, displacement, absolute=False, link=False):
+    return (
+        (16 << 26)
+        | (bo << 21)
+        | (bi << 16)
+        | (((displacement >> 2) & 0x3FFF) << 2)
+        | (int(absolute) << 1)
+        | int(link)
+    )
+
+
 def make_branch(displacement, absolute=False, link=False):
     encoded = (displacement >> 2) & 0x00FFFFFF
     return (
@@ -97,6 +108,28 @@ class CPUTests(unittest.TestCase):
         cpu.execute(make_branch(16, link=True))
 
         self.assertEqual(cpu.lr, 104)
+        self.assertEqual(cpu.pc, 116)
+
+    def test_conditional_branch_tests_cr_bit_true(self):
+        cpu = CPUState()
+        cpu.pc = 100
+        cpu.cr = 1 << (31 - 2)
+        cpu.execute(make_conditional_branch(12, 2, 16))
+        self.assertEqual(cpu.pc, 116)
+
+    def test_conditional_branch_not_taken_advances_pc(self):
+        cpu = CPUState()
+        cpu.pc = 100
+        cpu.execute(make_conditional_branch(12, 2, 16))
+        self.assertEqual(cpu.pc, 104)
+
+    def test_conditional_branch_ctr_decrement(self):
+        cpu = CPUState()
+        cpu.pc = 100
+        cpu.ctr = 2
+        # BO=16 ignores CR and branches while decremented CTR != 0.
+        cpu.execute(make_conditional_branch(16, 0, 16))
+        self.assertEqual(cpu.ctr, 1)
         self.assertEqual(cpu.pc, 116)
 
     def test_unsupported_instruction_does_not_advance_pc(self):
