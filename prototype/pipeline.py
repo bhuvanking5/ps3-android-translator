@@ -1,13 +1,34 @@
-
 """Connect the PowerPC decoder to ARM64 code generation."""
 
 from prototype.ppc_decoder import decode_word
+
+
+def _require_supported_registers(ins):
+    """Reject GPRs that need the not-yet-implemented r31 spill path."""
+    op = ins["mnemonic"]
+    registers = [ins["rt"]]
+
+    if op == "addi":
+        # PowerPC addi treats RA=0 as a literal zero, not as GPR r0.
+        if ins["ra"] != 0:
+            registers.append(ins["ra"])
+    elif op == "add":
+        registers.extend([ins["ra"], ins["rb"]])
+
+    if 31 in registers:
+        raise ValueError(
+            "PowerPC r31 needs a spill/load implementation; "
+            "translation to ARM64 is not supported for r31 yet"
+        )
 
 
 def translate_word(word):
     """Translate one supported PowerPC instruction into ARM64 assembly."""
     ins = decode_word(word)
     op = ins["mnemonic"]
+
+    if op in ("addi", "add"):
+        _require_supported_registers(ins)
 
     if op == "addi":
         dst = f'x{ins["rt"]}'
@@ -83,4 +104,3 @@ def translate_program(instructions, start_address=0):
             ) from exc
 
     return output
-        
