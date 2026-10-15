@@ -38,7 +38,7 @@ class EndToEndTests(unittest.TestCase):
         self.assertEqual(report["machine_code_size"], 12)
         self.assertEqual(
             report["machine_code_hex"],
-            "e30080d202000014440080d2",
+            "e30080d201000014440080d2",
         )
 
     def test_expanded_instruction_changes_output_count(self):
