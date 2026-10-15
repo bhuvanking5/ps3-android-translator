@@ -44,6 +44,11 @@ def translate_block(instructions, start_address=0):
         guest_address = start_address + index * 4
         guest_to_host[guest_address] = host_offset
 
+        if ins["mnemonic"] == "bc":
+            raise ValueError(
+                f"Conditional branch unsupported at 0x{guest_address:08X}"
+            )
+
         if ins["mnemonic"] == "b":
             if ins["absolute"]:
                 raise ValueError(
