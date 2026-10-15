@@ -4,8 +4,37 @@
 #include <stdio.h>
 
 int main(void) {
+    const uint8_t dummy_code[] = {0, 0, 0, 0};
+    uint64_t result = 0;
+
+    if (arm64_execute_u64(NULL, sizeof(dummy_code), &result) !=
+        ARM64_RUNTIME_INVALID_ARGUMENT) {
+        fputs("null-code check failed\n", stderr);
+        return 1;
+    }
+    if (arm64_execute_u64(dummy_code, sizeof(dummy_code), NULL) !=
+        ARM64_RUNTIME_INVALID_ARGUMENT) {
+        fputs("null-result check failed\n", stderr);
+        return 1;
+    }
+    if (arm64_execute_u64(dummy_code, 0, &result) !=
+        ARM64_RUNTIME_INVALID_ARGUMENT) {
+        fputs("zero-size check failed\n", stderr);
+        return 1;
+    }
+    if (arm64_execute_u64(dummy_code, 3, &result) !=
+        ARM64_RUNTIME_INVALID_ARGUMENT) {
+        fputs("unaligned-size check failed\n", stderr);
+        return 1;
+    }
+
 #if !defined(__aarch64__)
-    puts("SKIP: native execution test requires an AArch64 runner");
+    if (arm64_execute_u64(dummy_code, sizeof(dummy_code), &result) !=
+        ARM64_RUNTIME_UNSUPPORTED_ARCH) {
+        fputs("unsupported-architecture check failed\n", stderr);
+        return 1;
+    }
+    puts("PASS: argument validation; execution skipped on non-AArch64 host");
     return 0;
 #else
     /* mov x0, #42; ret — AArch64 little-endian instruction bytes. */
@@ -13,20 +42,13 @@ int main(void) {
         0x40, 0x05, 0x80, 0xD2,
         0xC0, 0x03, 0x5F, 0xD6
     };
-    uint64_t result = 0;
     int status = arm64_execute_u64(code, sizeof(code), &result);
     if (status != ARM64_RUNTIME_OK || result != 42) {
         fprintf(stderr, "native execution failed: status=%d result=%llu\n",
                 status, (unsigned long long)result);
         return 1;
     }
-
-    if (arm64_execute_u64(code, 0, &result) != ARM64_RUNTIME_INVALID_ARGUMENT) {
-        fputs("invalid-size check failed\n", stderr);
-        return 1;
-    }
-
-    puts("PASS: executed ARM64 machine code and returned 42");
+    puts("PASS: argument validation and ARM64 code returned 42");
     return 0;
 #endif
 }
