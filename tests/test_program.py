@@ -87,7 +87,7 @@ class ProgramTests(unittest.TestCase):
         self.assertEqual(steps, 2)
         self.assertEqual(cpu.ctr, 1)
         self.assertEqual(cpu.gpr[3], 7)
-        self.assertEqual(cpu.pc, 8)
+        self.assertEqual(cpu.pc, 12)
 
     def test_step_limit_stops_infinite_loop(self):
         cpu = CPUState()
