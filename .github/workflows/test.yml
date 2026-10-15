@@ -26,3 +26,24 @@ jobs:
           cmake -S . -B build -DPS3_TRANSLATOR_BUILD_PYTHON_BINDING=ON
           cmake --build build --parallel 2
           ctest --test-dir build --output-on-failure
+
+  android-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager "ndk;27.2.12479018"
+
+      - name: Cross-compile native runtime for Android arm64-v8a
+        run: |
+          cmake -S . -B build-android \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_HOME/ndk/27.2.12479018/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-26 \
+            -DPS3_TRANSLATOR_BUILD_PYTHON_BINDING=OFF
+          cmake --build build-android --parallel 2
