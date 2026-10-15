@@ -74,6 +74,17 @@ public final class MainActivity extends Activity {
         demoNote.setPadding(0, 8, 0, 8);
         layout.addView(demoNote);
 
+        Button demo3d = new Button(this);
+        demo3d.setText("Run built-in 3D OpenGL test");
+        demo3d.setOnClickListener(v ->
+            startActivity(new Intent(this, ThreeDTestActivity.class)));
+        layout.addView(demo3d);
+        TextView demo3dNote = text(
+            "Rotating 3D cube for checking Android OpenGL ES rendering. This is not PS3 graphics emulation.",
+            13, Color.rgb(255, 205, 130));
+        demo3dNote.setPadding(0, 8, 0, 8);
+        layout.addView(demo3dNote);
+
         heading("Performance settings");
         TextView preset = text("Default preset: Low-end device (conservative settings)", 14, Color.rgb(130, 230, 160));
         layout.addView(preset);
