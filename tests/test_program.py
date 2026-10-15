@@ -22,6 +22,15 @@ def addi(rt, ra, immediate):
     )
 
 
+def conditional_branch(bo, bi, displacement):
+    return (
+        (16 << 26)
+        | (bo << 21)
+        | (bi << 16)
+        | (((displacement >> 2) & 0x3FFF) << 2)
+    )
+
+
 def branch(displacement):
     return (18 << 26) | ((displacement >> 2) & 0x00FFFFFF) << 2
 
@@ -63,6 +72,22 @@ class ProgramTests(unittest.TestCase):
 
         self.assertEqual(steps, 2)
         self.assertEqual(cpu.gpr[3], 7)
+
+    def test_conditional_branch_executes_through_program_runner(self):
+        cpu = CPUState()
+        cpu.ctr = 2
+        program = [
+            conditional_branch(16, 0, 8),  # decrement CTR; branch if nonzero
+            addi(3, 0, 99),                # must be skipped
+            addi(3, 0, 7),
+        ]
+
+        steps = run_program(cpu, program)
+
+        self.assertEqual(steps, 2)
+        self.assertEqual(cpu.ctr, 1)
+        self.assertEqual(cpu.gpr[3], 7)
+        self.assertEqual(cpu.pc, 8)
 
     def test_step_limit_stops_infinite_loop(self):
         cpu = CPUState()
