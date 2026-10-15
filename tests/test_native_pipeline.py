@@ -43,8 +43,9 @@ class NativePipelineTests(unittest.TestCase):
         self.assertEqual(len(result), 8)
 
     def test_reject_unsupported_instruction(self):
+        # Conditional branch opcode 16 is not implemented in native codegen.
         with self.assertRaises(ValueError):
-            translate_word_to_machine_code(0x48000004)
+            translate_word_to_machine_code(0x40000004)
 
 
 if __name__ == "__main__":
