@@ -44,18 +44,17 @@ class CPUState:
         elif op == "bc":
             bo = ins["bo"]
             bi = ins["bi"]
-            # BO bit 0 controls whether CTR is ignored; BO bit 1
-            # selects CTR==0 versus CTR!=0. BO bit 2 ignores CR;
-            # BO bit 3 selects the expected CR bit value.
-            if not (bo & 0b10000):
+            # PowerPC BO fields: bit 4 ignores CR, bit 3 selects the
+            # expected CR value, bit 2 ignores CTR, bit 1 selects CTR==0.
+            if not (bo & 0b00100):
                 self.ctr = (self.ctr - 1) & MASK32
-                ctr_ok = (self.ctr == 0) == bool(bo & 0b01000)
+                ctr_ok = (self.ctr == 0) == bool(bo & 0b00010)
             else:
                 ctr_ok = True
 
-            if not (bo & 0b00100):
+            if not (bo & 0b10000):
                 cr_bit = (self.cr >> (31 - bi)) & 1
-                cr_ok = cr_bit == int(bool(bo & 0b00010))
+                cr_ok = cr_bit == int(bool(bo & 0b01000))
             else:
                 cr_ok = True
 
