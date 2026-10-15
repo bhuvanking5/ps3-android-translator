@@ -52,7 +52,11 @@ static struct PyModuleDef module = {
     "ps3_native",
     "Experimental native ARM64 runtime binding.",
     -1,
-    methods
+    methods,
+    NULL,
+    NULL,
+    NULL,
+    NULL
 };
 
 PyMODINIT_FUNC PyInit_ps3_native(void) {
