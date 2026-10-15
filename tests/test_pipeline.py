@@ -38,6 +38,27 @@ class PipelineTests(unittest.TestCase):
             translate_word(word), ["    add x3, x4, x5"]
         )
 
+    def test_relative_unlinked_branch_forward(self):
+        # PowerPC b +16: opcode 18, LI field stores displacement >> 2.
+        word = (18 << 26) | (16 & 0x03FFFFFC)
+        self.assertEqual(translate_word(word), ["    b #16"])
+
+    def test_relative_unlinked_branch_backward(self):
+        # PowerPC b -16 encodes a signed 24-bit word displacement.
+        li = (-16 >> 2) & 0x00FFFFFF
+        word = (18 << 26) | (li << 2)
+        self.assertEqual(translate_word(word), ["    b #-16"])
+
+    def test_reject_linked_branch(self):
+        word = (18 << 26) | (16 & 0x03FFFFFC) | 1
+        with self.assertRaisesRegex(ValueError, "Linked"):
+            translate_word(word)
+
+    def test_reject_absolute_branch(self):
+        word = (18 << 26) | (16 & 0x03FFFFFC) | 2
+        with self.assertRaisesRegex(ValueError, "Absolute"):
+            translate_word(word)
+
     def test_translate_big_endian_bytes(self):
         word = (14 << 26) | (3 << 21) | (4 << 16) | 10
         self.assertEqual(
