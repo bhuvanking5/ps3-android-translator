@@ -63,6 +63,17 @@ public final class MainActivity extends Activity {
         selectedGame.setPadding(0, 8, 0, 8);
         layout.addView(selectedGame);
 
+        Button demoGame = new Button(this);
+        demoGame.setText("Run built-in 2D performance test");
+        demoGame.setOnClickListener(v ->
+            startActivity(new Intent(this, TwoDTestActivity.class)));
+        layout.addView(demoGame);
+        TextView demoNote = text(
+            "This is a small Android test game for checking drawing, touch input and FPS. It is NOT a PS3 game and does not test PS3 compatibility.",
+            13, Color.rgb(255, 205, 130));
+        demoNote.setPadding(0, 8, 0, 8);
+        layout.addView(demoNote);
+
         heading("Performance settings");
         TextView preset = text("Default preset: Low-end device (conservative settings)", 14, Color.rgb(130, 230, 160));
         layout.addView(preset);
