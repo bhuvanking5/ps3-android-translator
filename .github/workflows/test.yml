@@ -8,19 +8,15 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Get source code
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
-
       - name: Build native runtime and optional Python extension
         run: |
           cmake -S . -B build -DPS3_TRANSLATOR_BUILD_PYTHON_BINDING=ON
@@ -32,15 +28,12 @@ jobs:
     steps:
       - name: Get source code
         uses: actions/checkout@v4
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: "platform-tools"
-
       - name: Install Android NDK
         run: sdkmanager "ndk;27.2.12479018"
-
       - name: Cross-compile native runtime for Android arm64-v8a
         run: |
           cmake -S . -B build-android \
@@ -49,3 +42,30 @@ jobs:
             -DANDROID_PLATFORM=android-26 \
             -DPS3_TRANSLATOR_BUILD_PYTHON_BINDING=OFF
           cmake --build build-android --parallel 2
+
+  android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get source code
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools;platforms;android-35;build-tools;35.0.0;cmake;3.22.1;ndk;27.2.12479018"
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+      - name: Build debug APK
+        run: gradle -p android assembleDebug
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3-translator-prototype-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
