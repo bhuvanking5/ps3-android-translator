@@ -53,7 +53,11 @@ public final class MainActivity extends Activity {
         addGame.setText("Choose game file");
         addGame.setOnClickListener(v -> chooseGame());
         layout.addView(addGame);
-        selectedGame = text("No file selected. Choosing a file does not launch it.", 14, Color.LTGRAY);
+        String savedGame = prefs.getString("selected_game_uri", null);
+        selectedGame = text(savedGame == null
+            ? "No file selected. Choosing a file does not launch it."
+            : "Previously selected file URI:\\n" + savedGame
+                + "\\nSaved for reference only; this prototype cannot launch PS3 games.", 14, Color.LTGRAY);
         selectedGame.setPadding(0, 8, 0, 8);
         layout.addView(selectedGame);
 
