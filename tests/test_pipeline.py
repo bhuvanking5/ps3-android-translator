@@ -1,4 +1,3 @@
-
 import os
 import sys
 import unittest
@@ -48,7 +47,7 @@ class PipelineTests(unittest.TestCase):
 
     def test_reject_wrong_byte_length(self):
         with self.assertRaises(ValueError):
-            translate_bytes(b"\x00\x00")
+            translate_bytes(b"\\x00\\x00")
 
     def test_reject_add_record_form(self):
         word = (
@@ -58,7 +57,24 @@ class PipelineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             translate_word(word)
 
+    def test_reject_r31_destination(self):
+        word = (14 << 26) | (31 << 21) | 7
+        with self.assertRaisesRegex(ValueError, "r31"):
+            translate_word(word)
+
+    def test_reject_r31_source(self):
+        word = (14 << 26) | (3 << 21) | (31 << 16) | 7
+        with self.assertRaisesRegex(ValueError, "r31"):
+            translate_word(word)
+
+    def test_reject_r31_add_operand(self):
+        word = (
+            (31 << 26) | (3 << 21) | (4 << 16)
+            | (31 << 11) | (266 << 1)
+        )
+        with self.assertRaisesRegex(ValueError, "r31"):
+            translate_word(word)
+
 
 if __name__ == "__main__":
     unittest.main()
-      
