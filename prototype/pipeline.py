@@ -27,6 +27,16 @@ def translate_word(word):
     ins = decode_word(word)
     op = ins["mnemonic"]
 
+    if op == "b":
+        if ins["absolute"]:
+            raise ValueError("Absolute PowerPC branches are not supported yet")
+        if ins["link"]:
+            raise ValueError("Linked PowerPC branches (LR update) are not supported yet")
+        displacement = ins["displacement"]
+        if displacement % 4 != 0:
+            raise ValueError("PowerPC branch displacement must be 4-byte aligned")
+        return [f"    b #{displacement}"]
+
     if op in ("addi", "add"):
         _require_supported_registers(ins)
 
