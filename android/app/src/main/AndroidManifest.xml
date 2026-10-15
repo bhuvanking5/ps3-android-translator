@@ -12,5 +12,6 @@
             </intent-filter>
         </activity>
         <activity android:name=".TwoDTestActivity" android:exported="false" />
+        <activity android:name=".ThreeDTestActivity" android:exported="false" />
     </application>
 </manifest>
