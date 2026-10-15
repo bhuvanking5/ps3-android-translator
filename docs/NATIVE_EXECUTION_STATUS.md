@@ -1,0 +1,24 @@
+# Native ARM64 execution status
+
+## Verified today
+
+- Python tests exercise decoder, reference interpreter, and translation-validation behavior.
+- The integrated validation report currently sets `native_execution` to `false`.
+- ARM64 machine-code bytes can be generated for a limited subset, but generation is not execution.
+
+## Not yet verified
+
+- No reproducible test has executed the generated machine-code bytes on an ARM64 CPU/runtime and checked the result.
+- No Android execution harness has been demonstrated.
+- No PS3 title has been run.
+
+## Acceptance criteria for the first native-execution milestone
+
+1. Choose a documented ARM64 environment that can safely execute generated code.
+2. Generate a minimal known instruction sequence using the project's encoder.
+3. Execute those bytes as machine code, not as printed assembly or hex.
+4. Check the resulting register/state value against a known expected value and the Python reference interpreter.
+5. Include architecture checks and fail clearly on unsupported environments.
+6. Run the test reproducibly in CI or document the exact manual command and environment.
+
+Until these criteria are met, keep `native_execution: false` and describe native execution as unverified.
