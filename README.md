@@ -9,33 +9,37 @@ Experimental research project exploring translation of a **small subset of Power
 - A small PowerPC instruction decoder and reference interpreter.
 - Experimental ARM64 instruction encoding for a limited instruction subset.
 - A basic block translator with limited local relative branch support.
-- Python unit tests run by GitHub Actions.
-- An integrated validation path that compares the reference interpreter's state with translation checks.
+- A C native runtime API and CMake build that produces a shared library.
+- Python unit tests and a native-runtime smoke test run by GitHub Actions.
 
 ## Important limitations
 
-- Generated ARM64 bytes are **not yet executed** by the integrated engine; its report explicitly marks `native_execution: false`.
+- The generated ARM64 bytes are **not yet connected to the translator or Android app**; the integrated engine still reports `native_execution: false`.
+- The native runtime smoke test validates API errors on the CI host. The actual machine-code execution test runs only on AArch64 and is skipped on the current x86-64 hosted runner.
 - The supported PowerPC instruction set is tiny and does not represent a complete PPU implementation.
-- Register `r31` has no real spill/load implementation. The simple pipeline now rejects translations that use it rather than pretending ARM64 `x31` is an ordinary general-purpose register.
+- Register `r31` has no real spill/load implementation. The simple pipeline rejects translations that use it rather than pretending ARM64 `x31` is an ordinary general-purpose register.
 - Branch support is limited; linking, absolute branches, and many control-flow cases are unsupported.
 - There is no complete PS3 system emulation, SPU emulation, memory model, operating-system layer, or graphics implementation.
 
-## Run tests
+## Build and test
 
-On a computer with Python 3.12:
+With CMake, a C compiler, and Python 3.12 installed:
 
 ```sh
+cmake -S . -B build
+cmake --build build --parallel 2
+ctest --test-dir build --output-on-failure
 python -m unittest discover -s tests -v
 ```
 
-GitHub Actions runs the same test command on pushes and pull requests. A green test run verifies the tests that exist; it does **not** prove native ARM64 execution or PS3 game compatibility.
+The CMake build produces the `ps3_arm64_runtime` shared library and a smoke-test executable. A green test run verifies only the tests that exist; it does **not** prove that ARM64 code executed on the CI host or that PS3 games are compatible.
 
 ## Current priorities
 
-1. Keep the supported subset correct and fail clearly on unsupported instructions.
-2. Add regression tests for instruction encodings, branches, register mapping, and edge cases.
-3. Design and implement proper register spill/load support before translating instructions that require it.
-4. Establish a reproducible ARM64 native-execution test harness before claiming native execution.
-5. Expand instruction coverage only alongside reference-versus-translator tests.
+1. Connect the translator's machine-code output to the native runtime through a well-defined API.
+2. Add an Android NDK build and JNI boundary, then test on an actual ARM64 Android device.
+3. Establish a reproducible ARM64 native-execution test harness.
+4. Implement correct register spill/load support and broader instruction coverage with reference-versus-translator tests.
+5. Work toward the much larger PPU/SPU, memory, OS, and graphics requirements of a PS3 emulator.
 
 See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md).
