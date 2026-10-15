@@ -22,7 +22,7 @@ class NativeBindingTests(unittest.TestCase):
 
     def test_rejects_unaligned_code(self):
         with self.assertRaises(ValueError):
-            ps3_native.execute_u64(b"\\x00")
+            ps3_native.execute_u64(b"x")
 
     @unittest.skipIf(
         platform.machine().lower() in ("aarch64", "arm64"),
@@ -30,7 +30,7 @@ class NativeBindingTests(unittest.TestCase):
     )
     def test_reports_unsupported_architecture(self):
         with self.assertRaisesRegex(RuntimeError, "requires an AArch64 process"):
-            ps3_native.execute_u64(b"\\x1f\\x20\\x03\\xd5")
+            ps3_native.execute_u64(b"abcd")
 
 
 if __name__ == "__main__":
