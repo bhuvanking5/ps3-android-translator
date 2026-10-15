@@ -143,8 +143,15 @@ public final class MainActivity extends Activity {
         if (requestCode == PICK_GAME && resultCode == RESULT_OK && data != null) {
             Uri uri = data.getData();
             if (uri != null) {
+                try {
+                    getContentResolver().takePersistableUriPermission(
+                        uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                } catch (SecurityException ignored) {
+                    // Some document providers do not grant persistable access.
+                }
+                prefs.edit().putString("selected_game_uri", uri.toString()).apply();
                 selectedGame.setText("Selected file: " + uri.getLastPathSegment()
-                    + "\nSelected for interface testing only; this prototype cannot launch PS3 games.");
+                    + "\nSelection saved. This prototype cannot launch PS3 games yet.");
             }
         }
     }
