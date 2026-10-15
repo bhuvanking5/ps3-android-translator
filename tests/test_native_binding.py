@@ -1,16 +1,20 @@
 """Smoke tests for the optional ps3_native extension.
 
 These tests validate the API boundary only. They never execute supplied machine code.
+The main Python suite can run before the optional extension is built; in that case
+these tests are skipped and CTest runs them after the extension build.
 """
+import importlib
 import platform
 import unittest
 
 try:
-    import ps3_native
-except ImportError as exc:
-    raise SystemExit(f"ps3_native extension was not built or found: {exc}")
+    ps3_native = importlib.import_module("ps3_native")
+except ImportError:
+    ps3_native = None
 
 
+@unittest.skipIf(ps3_native is None, "optional ps3_native extension is not built yet")
 class NativeBindingTests(unittest.TestCase):
     def test_rejects_empty_code(self):
         with self.assertRaises(ValueError):
