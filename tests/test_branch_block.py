@@ -67,6 +67,10 @@ class BranchBlockTests(unittest.TestCase):
             translate_block([addi(3, 0, 1)], start_address=2)
 
 
+    def test_reject_conditional_branch(self):
+        with self.assertRaisesRegex(ValueError, "Conditional branch unsupported"):
+            translate_block([0x42000004, addi(3, 0, 1)])
+
 if __name__ == "__main__":
     unittest.main()
   
