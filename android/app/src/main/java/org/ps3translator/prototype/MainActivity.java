@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.Uri;
+import android.database.Cursor;
+import android.provider.OpenableColumns;
 import android.view.Gravity;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -150,10 +152,43 @@ public final class MainActivity extends Activity {
                     // Some document providers do not grant persistable access.
                 }
                 prefs.edit().putString("selected_game_uri", uri.toString()).apply();
-                selectedGame.setText("Selected file: " + uri.getLastPathSegment()
-                    + "\nSelection saved. This prototype cannot launch PS3 games yet.");
+                selectedGame.setText(describeSelectedFile(uri));
             }
         }
+    }
+
+
+    private String describeSelectedFile(Uri uri) {
+        String displayName = uri.getLastPathSegment();
+        long size = -1L;
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(uri,
+                new String[] {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE},
+                null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                if (nameIndex >= 0 && !cursor.isNull(nameIndex)) displayName = cursor.getString(nameIndex);
+                if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) size = cursor.getLong(sizeIndex);
+            }
+        } catch (RuntimeException ignored) {
+            // Document providers may not expose metadata; keep the URI fallback.
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        String lower = displayName == null ? "" : displayName.toLowerCase(java.util.Locale.ROOT);
+        String format;
+        if (lower.endsWith(".iso")) format = "ISO image (candidate disc image; not validated)";
+        else if (lower.endsWith(".pkg")) format = "PKG package (candidate install package; not validated)";
+        else if (lower.endsWith(".elf")) format = "ELF executable (candidate file; not validated)";
+        else if (lower.endsWith(".self")) format = "SELF executable (candidate file; not validated)";
+        else format = "Unknown extension (format not recognized)";
+        String sizeText = size < 0 ? "Size: unavailable"
+            : String.format(java.util.Locale.ROOT, "Size: %.2f MiB", size / (1024.0 * 1024.0));
+        return "Selected: " + (displayName == null ? "Unknown file" : displayName)
+            + "\n" + sizeText + "\nFormat hint: " + format
+            + "\nSaved for library testing only. No file contents are loaded or executed; PS3 game launching is not implemented.";
     }
 
     private static native String nativeStatus();
