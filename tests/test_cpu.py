@@ -132,6 +132,34 @@ class CPUTests(unittest.TestCase):
         self.assertEqual(cpu.ctr, 1)
         self.assertEqual(cpu.pc, 116)
 
+
+    def test_conditional_branch_ctr_zero_condition(self):
+        cpu = CPUState()
+        cpu.pc = 100
+        cpu.ctr = 1
+        # BO=18 ignores CR and branches when decremented CTR equals zero.
+        cpu.execute(make_conditional_branch(18, 0, 16))
+        self.assertEqual(cpu.ctr, 0)
+        self.assertEqual(cpu.pc, 116)
+
+    def test_conditional_branch_link_sets_return_address(self):
+        cpu = CPUState()
+        cpu.pc = 100
+        cpu.ctr = 2
+        # BO=16 ignores CR and branches while decremented CTR != 0.
+        cpu.execute(make_conditional_branch(16, 0, 16, link=True))
+        self.assertEqual(cpu.lr, 104)
+        self.assertEqual(cpu.pc, 116)
+
+    def test_conditional_branch_ctr_zero_condition_not_taken(self):
+        cpu = CPUState()
+        cpu.pc = 100
+        cpu.ctr = 2
+        # Decrement leaves CTR=1, so BO=18 must not branch.
+        cpu.execute(make_conditional_branch(18, 0, 16))
+        self.assertEqual(cpu.ctr, 1)
+        self.assertEqual(cpu.pc, 104)
+
     def test_unsupported_instruction_does_not_advance_pc(self):
         cpu = CPUState()
 
