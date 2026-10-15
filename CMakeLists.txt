@@ -18,7 +18,7 @@ add_test(NAME native_runtime_smoke COMMAND test_arm64_runtime)
 
 option(PS3_TRANSLATOR_BUILD_PYTHON_BINDING "Build the optional CPython extension" OFF)
 if(PS3_TRANSLATOR_BUILD_PYTHON_BINDING)
-  find_package(Python3 REQUIRED COMPONENTS Development.Module)
+  find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
   Python3_add_library(ps3_native MODULE native/python_binding.c WITH_SOABI)
   target_link_libraries(ps3_native PRIVATE ps3_arm64_runtime)
   target_include_directories(ps3_native PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/native")
