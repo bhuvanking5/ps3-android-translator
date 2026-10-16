@@ -130,7 +130,7 @@ ppc_to_arm64_status ppc_translate_to_arm64(
                     if (imm > 0) {
                         constant = movz(SCRATCH_B, (unsigned)imm);
                     } else {
-                        constant = movn(SCRATCH_B, (unsigned)(-imm - 1));
+                        constant = movz(SCRATCH_B, (unsigned)(-imm));
                     }
                     if (!emit(output, output_capacity, &used, constant) ||
                         !emit(output, output_capacity, &used,
