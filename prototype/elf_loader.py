@@ -19,6 +19,8 @@ def inspect_ps3_elf(data):
     if not isinstance(data, (bytes, bytearray, memoryview)):
         raise ValueError("ELF input must be bytes")
     data = bytes(data)
+    if len(data) < 4 or data[:4] != ELF_MAGIC:
+        raise ValueError("Invalid ELF magic")
     if len(data) < ELF_HEADER.size:
         raise ValueError("File is too small for an ELF64 header")
 
