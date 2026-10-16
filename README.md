@@ -8,7 +8,7 @@ Experimental research project exploring translation of a **small subset of Power
 
 - A small PowerPC instruction decoder and reference interpreter, including `or` register logic and bounded execution directly from guest-memory buffers for a tiny instruction subset.
 - A defensive PS3-style ELF64/PowerPC64 metadata inspector and bounded PT_LOAD segment mapper; this is not a complete SELF/ELF game loader.
-- Experimental ARM64 instruction encoding for a limited instruction subset, now including register-form `ORR` for translated PowerPC `or`.
+- Experimental ARM64 instruction encoding for a limited instruction subset, including register-form `ORR`, 64-bit `MUL`, and PowerPC `mulld` decode/reference-execution/translation coverage. The record-setting form remains explicitly unsupported.
 - A basic block translator with limited local relative branch support, plus explicit rejection tests for unsupported absolute/linked branches, `r31`, record-form `add`, and misaligned program addresses.
 - A C native runtime API and CMake build that produces a shared library.
 - Python unit tests and a native-runtime smoke test run by GitHub Actions.
