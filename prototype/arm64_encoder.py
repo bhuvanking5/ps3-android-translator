@@ -90,6 +90,13 @@ def encode_instruction(assembly):
         base = 0x8B000000 if mnemonic == "add" else 0xCB000000
         return base | (rm << 16) | (rn << 5) | rd
 
+    # MUL Xd, Xn, Xm is an alias of MADD Xd, Xn, Xm, XZR.
+    if mnemonic == "mul" and len(operands) == 3:
+        rd = _register(operands[0])
+        rn = _register(operands[1])
+        rm = _register(operands[2])
+        return 0x9B007C00 | (rm << 16) | (rn << 5) | rd
+
     # ORR register (64-bit).
     if mnemonic == "orr" and len(operands) == 3:
         rd = _register(operands[0])
