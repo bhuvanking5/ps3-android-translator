@@ -47,3 +47,20 @@ ps3_controller_input ps3_controller_input_read(void) {
     state.right_y = bits_float(atomic_load_explicit(&g_right_y_bits, memory_order_relaxed));
     return state;
 }
+
+static uint8_t axis_to_u8(float value) {
+    const float normalized = clamp_axis(value);
+    return (uint8_t)((normalized + 1.0f) * 127.5f + 0.5f);
+}
+
+/* Convert the UI mailbox into a stable, generic emulator-facing report. */
+ps3_controller_report ps3_controller_input_read_report(void) {
+    const ps3_controller_input input = ps3_controller_input_read();
+    ps3_controller_report report;
+    report.buttons = input.pressed_mask;
+    report.left_x = axis_to_u8(input.left_x);
+    report.left_y = axis_to_u8(input.left_y);
+    report.right_x = axis_to_u8(input.right_x);
+    report.right_y = axis_to_u8(input.right_y);
+    return report;
+}
