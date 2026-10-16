@@ -90,6 +90,19 @@ class TranslationProgramTests(unittest.TestCase):
             0x17FFFFFE,
         )
 
+    def test_unsupported_absolute_branch_reports_program_address(self):
+        absolute_branch = ppc_b(8) | 2
+        with self.assertRaisesRegex(ValueError, r"0x00002000.*Absolute"):
+            translate_program([absolute_branch], start_address=0x2000)
+
+    def test_relative_branch_translation_preserves_zero_displacement(self):
+        translated = translate_program([ppc_b(0)], start_address=0x1000)
+        self.assertEqual(translated, ["    b #0"])
+        self.assertEqual(
+            int.from_bytes(encode_program(translated), "little"),
+            0x14000000,
+        )
+
     def test_unsupported_linked_branch_reports_program_address(self):
         linked_branch = ppc_b(8) | 1
         with self.assertRaisesRegex(ValueError, r"0x00001004.*Linked"):
