@@ -17,6 +17,14 @@ static uint32_t branch(int displacement, unsigned absolute, unsigned link) {
     return (18u << 26) | ((uint32_t)displacement & 0x03FFFFFCu) |
            ((absolute & 1u) << 1) | (link & 1u);
 }
+static uint32_t cmpwi(unsigned bf, unsigned ra, int imm) {
+    return (11u << 26) | (bf << 23) | (ra << 16) |
+           ((uint32_t)imm & 0xffffu);
+}
+static uint32_t cond_branch(unsigned bo, unsigned bi, int displacement) {
+    return (16u << 26) | (bo << 21) | (bi << 16) |
+           ((uint32_t)displacement & 0xfffcu);
+}
 static uint32_t xo(unsigned rt, unsigned ra, unsigned rb, unsigned ext) {
     return (31u << 26) | (rt << 21) | (ra << 16) | (rb << 11) | (ext << 1);
 }
@@ -56,6 +64,36 @@ int main(void) {
     CHECK(ppc_cpu_run(branch_program, 4, gpr) == PPC_CPU_OK);
     CHECK(gpr[3] == 1u && gpr[4] == 7u); /* branch skips the middle ADDI */
 
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t conditional_taken[] = {
+        addi(3, 0, 7), cmpwi(0, 3, 7),
+        cond_branch(12, 2, 8), addi(4, 0, 99), addi(4, 0, 1)
+    };
+    CHECK(ppc_cpu_run(conditional_taken, 5, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 1u); /* EQ bit true: branch skips the unwanted write */
+
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t conditional_not_taken[] = {
+        addi(3, 0, 7), cmpwi(0, 3, 8),
+        cond_branch(12, 2, 8), addi(4, 0, 5), addi(4, 0, 6)
+    };
+    CHECK(ppc_cpu_run(conditional_not_taken, 5, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 6u); /* EQ bit false: execution falls through */
+
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t branch_if_false[] = {
+        addi(3, 0, 7), cmpwi(0, 3, 8),
+        cond_branch(4, 2, 8), addi(4, 0, 99), addi(4, 0, 6)
+    };
+    CHECK(ppc_cpu_run(branch_if_false, 5, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 6u); /* BO=4 branches when the selected CR bit is false */
+
+    const uint32_t unsupported_conditional[] = {
+        cond_branch(16, 2, 4), addi(3, 0, 1)
+    };
+    CHECK(ppc_cpu_run(unsupported_conditional, 2, gpr) ==
+          PPC_CPU_UNSUPPORTED_INSTRUCTION);
+
     const uint32_t looping_branch[] = { branch(0, 0, 0) };
     CHECK(ppc_cpu_run(looping_branch, 1, gpr) == PPC_CPU_STEP_LIMIT);
     const uint32_t out_of_range_branch[] = { branch(8, 0, 0) };
@@ -70,6 +108,6 @@ int main(void) {
     CHECK(ppc_cpu_run(NULL, 1, gpr) == PPC_CPU_INVALID_ARGUMENT);
     CHECK(ppc_cpu_run(program, 1, NULL) == PPC_CPU_INVALID_ARGUMENT);
 
-    puts("PowerPC subset tests passed (arithmetic/logical ops, local branches, step limit, bounds, unsupported instructions).");
+    puts("PowerPC subset tests passed (arithmetic/logical ops, local branches, cmpwi/bc, step limit, bounds, unsupported instructions).");
     return 0;
 }
