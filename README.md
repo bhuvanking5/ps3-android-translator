@@ -13,7 +13,7 @@ Experimental research project exploring translation of a **small subset of Power
 - An optional CPython extension API, `ps3_native.translate_and_execute_ppc(words, result_gpr)`, that accepts PowerPC instruction words, validates and translates the supported subset, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
 - A Python wrapper at `prototype/native_execution.py` for calling that optional native API.
 - An Android JNI smoke-test path that translates a fixed built-in PowerPC arithmetic program, executes the generated ARM64 words, and compares the result against the reference interpreter. It never accepts executable bytes from a selected game file.
-- A virtual controller UI publishes button bits and normalized analog-stick axes into a native input mailbox, with host-side C tests for input range handling. This is an integration seam only; no PS3 emulation loop consumes it yet.
+- A virtual controller UI publishes button bits and normalized analog-stick axes into a native input mailbox, with host-side C tests for input range handling. This is an integration seam only; no PS3 emulation loop consumes it yet. The native adapter also exposes a generic report with button flags and 8-bit axes (0/128/255 = negative/center/positive), covered by host tests.
 - CMake tests for translation encodings, native execution, and Python-binding input validation, plus Android APK build checks.
 - A Python basic-block planner that splits supported instruction sequences around relative unconditional branches, builds explicit successor edges, and rejects conditional, absolute, linked, or out-of-range control flow.
 
