@@ -73,6 +73,15 @@ int main(void) {
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
     CHECK(output[70] == 0x17FFFFFEu); /* B from the relocated branch back to the previous ADDI */
 
+    /* MULLI uses a signed immediate and reads the actual GPR0 when RA=0. */
+    const uint32_t mulli_program[] = {
+        addi(3, 0, 12),
+        (7u << 26) | (4u << 21) | (3u << 16) | 5u,
+        (7u << 26) | (5u << 21) | (4u << 16) | ((uint32_t)-3 & 0xffffu)
+    };
+    CHECK(ppc_translate_to_arm64(mulli_program, 3, 5, output,
+          PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
+
     /* ORI/XORI immediate forms use RT as source and RA as destination. */
     const uint32_t logical_immediate[] = {
         (14u << 26) | (3u << 21) | 0x0F0Fu,
