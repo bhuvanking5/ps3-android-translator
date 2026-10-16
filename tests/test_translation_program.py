@@ -73,7 +73,7 @@ class TranslationProgramTests(unittest.TestCase):
         )
 
     def test_translate_bytes_rejects_wrong_input_size(self):
-        for data in (b"", b"\\x00", b"\\x00" * 8, "not bytes"):
+        for data in (b"", b"\x00", b"\\x00" * 8, "not bytes"):
             with self.subTest(data=data):
                 with self.assertRaisesRegex(ValueError, "exactly 4 bytes"):
                     translate_bytes(data)
