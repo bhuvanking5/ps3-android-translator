@@ -63,6 +63,16 @@ public final class MainActivity extends Activity {
         selectedGame.setPadding(0, 8, 0, 8);
         layout.addView(selectedGame);
 
+        Button launch = new Button(this);
+        launch.setText("Inspect and launch selected game");
+        launch.setOnClickListener(v -> inspectLaunchSelectedGame());
+        layout.addView(launch);
+        TextView launchNote = text(
+            "Launch pipeline milestone: validates the selected file header only. This build does not boot PS3 games.",
+            13, Color.rgb(255, 205, 130));
+        launchNote.setPadding(0, 4, 0, 8);
+        layout.addView(launchNote);
+
         Button demoGame = new Button(this);
         demoGame.setText("Run built-in 2D performance test");
         demoGame.setOnClickListener(v ->
@@ -190,6 +200,55 @@ public final class MainActivity extends Activity {
         }
     }
 
+
+    private void inspectLaunchSelectedGame() {
+        String saved = prefs.getString("selected_game_uri", null);
+        if (saved == null) {
+            selectedGame.setText("Choose a PS3 game file first. No game is selected.");
+            return;
+        }
+        Uri uri = Uri.parse(saved);
+        byte[] header = new byte[64];
+        int count = -1;
+        try (java.io.InputStream input = getContentResolver().openInputStream(uri)) {
+            if (input == null) {
+                selectedGame.setText("Cannot open selected file. Choose it again and check file access.");
+                return;
+            }
+            count = 0;
+            while (count < header.length) {
+                int n = input.read(header, count, header.length - count);
+                if (n < 0) break;
+                if (n == 0) continue;
+                count += n;
+            }
+        } catch (java.io.IOException | SecurityException ex) {
+            selectedGame.setText("Could not read the file header: " + ex.getClass().getSimpleName()
+                + ". Choose the file again and retry.");
+            return;
+        }
+
+        if (count >= 4 && header[0] == 0x7f && header[1] == 'E'
+                && header[2] == 'L' && header[3] == 'F') {
+            if (count >= 20 && header[4] == 2 && header[5] == 2
+                    && header[18] == 0 && header[19] == 21) {
+                selectedGame.setText("Header check: big-endian ELF64 / PowerPC64 candidate detected. "
+                    + "This is only a format check; relocations, SELF decryption, the PS3 runtime, "
+                    + "and graphics translation are not implemented. Game was NOT launched.");
+            } else {
+                selectedGame.setText("ELF header detected, but it does not match the expected "
+                    + "ELF64 big-endian PowerPC64 signature. Game was NOT launched.");
+            }
+        } else if (count >= 4 && header[0] == 'S' && header[1] == 'C'
+                && header[2] == 'E' && header[3] == 0) {
+            selectedGame.setText("SELF-style signature detected. Encrypted/signed executable handling "
+                + "is not implemented, so this file cannot be launched.");
+        } else {
+            selectedGame.setText("No supported executable header detected in the first "
+                + Math.max(count, 0) + " bytes. ISO/PKG/container parsing is not implemented. "
+                + "Game was NOT launched.");
+        }
+    }
 
     private String describeSelectedFile(Uri uri) {
         String displayName = uri.getLastPathSegment();
