@@ -1,0 +1,56 @@
+name: Prototype validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prototype-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-tests:
+    name: Host C and Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Configure native tests
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build native tests
+        run: cmake --build build --parallel 2
+      - name: Run CTest
+        run: ctest --test-dir build --output-on-failure
+      - name: Run Python tests
+        run: python -m unittest discover -s tests -v
+
+  android-build:
+    name: Android ARM64 bridge build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - name: Install Android build components
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.10.2"
+      - name: Build debug APK
+        run: gradle --no-daemon -p android assembleDebug
+      - name: Preserve debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3-translator-prototype-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
