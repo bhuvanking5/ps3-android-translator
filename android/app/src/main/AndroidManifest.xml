@@ -11,6 +11,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".VirtualControllerActivity" android:exported="false" />
         <activity android:name=".TwoDTestActivity" android:exported="false" />
         <activity android:name=".ThreeDTestActivity" android:exported="false" />
         <activity android:name=".GraphicsTranslationTestActivity" android:exported="false" />
