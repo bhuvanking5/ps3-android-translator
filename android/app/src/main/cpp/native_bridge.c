@@ -3,6 +3,7 @@
 #include "arm64_runtime.h"
 #include "ppc_cpu.h"
 #include "ppc_to_arm64.h"
+#include "controller_input.h"
 
 /* Fixed, built-in ARM64 runtime smoke test; never use game-file bytes. */
 static const uint32_t kArm64SmokeTest[] = {
@@ -82,4 +83,19 @@ Java_org_ps3translator_prototype_MainActivity_nativeStatus(JNIEnv *env, jclass c
         message = "Native translation/execution comparison FAILED. PS3 games are not supported yet.";
     }
     return (*env)->NewStringUTF(env, message);
+}
+
+/*
+ * Publish virtual-controller input into a native mailbox. A future emulator
+ * input loop can read this through ps3_controller_input_read(); this function
+ * alone does not make the prototype emulate a PS3 controller or game.
+ */
+JNIEXPORT void JNICALL
+Java_org_ps3translator_prototype_ControllerInputState_nativePublish(
+    JNIEnv *env, jclass clazz, jint pressed_mask,
+    jfloat left_x, jfloat left_y, jfloat right_x, jfloat right_y) {
+    (void)env;
+    (void)clazz;
+    ps3_controller_input_publish((uint32_t)pressed_mask,
+        (float)left_x, (float)left_y, (float)right_x, (float)right_y);
 }
