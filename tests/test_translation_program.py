@@ -48,8 +48,10 @@ class TranslationProgramTests(unittest.TestCase):
 
     def test_return_instruction_encodes_exactly(self):
         self.assertEqual(encode_program(["ret"]), bytes.fromhex("c0035fd6"))
-        with self.assertRaisesRegex(ValueError, "Unsupported ARM64 instruction"):
-            encode_program(["ret x30"])
+        self.assertEqual(encode_program(["ret x30"]), bytes.fromhex("c0035fd6"))
+        self.assertEqual(encode_program(["ret x5"]), bytes.fromhex("a0005fd6"))
+        with self.assertRaisesRegex(ValueError, "RET expects one register operand"):
+            encode_program(["ret x5, x6"])
 
     def test_guest_program_generates_fixed_native_smoke_bytes(self):
         # This proves the translator pipeline emits the exact bytes used by
