@@ -81,3 +81,15 @@ target_include_directories(test_controller_input PRIVATE
 )
 target_compile_options(test_controller_input PRIVATE -Wall -Wextra -Werror)
 add_test(NAME native_controller_input COMMAND test_controller_input)
+
+add_executable(test_prototype_runtime
+  tests/test_prototype_runtime.c
+  android/app/src/main/cpp/prototype_runtime.c
+  android/app/src/main/cpp/controller_input.c
+  android/app/src/main/cpp/ppc_cpu.c
+)
+target_include_directories(test_prototype_runtime PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_prototype_runtime PRIVATE -Wall -Wextra -Werror)
+add_test(NAME prototype_runtime_integration COMMAND test_prototype_runtime)
