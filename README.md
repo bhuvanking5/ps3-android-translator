@@ -46,3 +46,13 @@ The CMake build produces the `ps3_arm64_runtime` shared library and a smoke-test
 5. Work toward the much larger PPU/SPU, memory, OS, and graphics requirements of a PS3 emulator.
 
 See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md).
+
+## Continuous integration
+
+The `.github/workflows/prototype-validation.yml` workflow runs the host-side C/Python test suites and builds the Android debug APK. When the Android build job succeeds, its APK is uploaded as the `ps3-translator-prototype-debug` workflow artifact.
+
+A successful build proves that the prototype compiles and that its existing tests pass; it does not prove that generated ARM64 code is executed by the translator, nor that any PS3 game is compatible.
+
+## Next practical milestone
+
+Connect the actual translator output to a narrowly scoped native execution test, compare the result with the reference interpreter, and run that test on an ARM64 Android device. Keep unsupported instructions rejected explicitly. Full PS3 game support remains a much larger project requiring CPU, SPU, memory, operating-system, and graphics emulation.
