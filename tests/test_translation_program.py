@@ -46,6 +46,11 @@ class TranslationProgramTests(unittest.TestCase):
         ]
         self.assertEqual(words, [0xD28000E0, 0xD2800261, 0xCB000020, 0xD65F03C0])
 
+    def test_return_instruction_encodes_exactly(self):
+        self.assertEqual(encode_program(["ret"]), bytes.fromhex("c0035fd6"))
+        with self.assertRaisesRegex(ValueError, "Unsupported ARM64 instruction"):
+            encode_program(["ret x30"])
+
     def test_guest_program_generates_fixed_native_smoke_bytes(self):
         # This proves the translator pipeline emits the exact bytes used by
         # the built-in native smoke test. It does not execute guest-supplied
