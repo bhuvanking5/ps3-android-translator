@@ -70,3 +70,36 @@ def inspect_ps3_elf(data):
         "load_segments": segments,
         "is_executable": e_type == 2,
     }
+
+def load_elf_segments(data, memory, memory_base=0):
+    """Copy validated PT_LOAD segments into a bounded guest-memory bytearray.
+
+    This is a small test harness helper, not a PS3 process loader. It rejects
+    segments outside the supplied memory and never executes file bytes.
+    Returns the ELF entry point as an address (not a host pointer).
+    """
+    if not isinstance(memory, bytearray):
+        raise ValueError("Guest memory must be a bytearray")
+    if not isinstance(memory_base, int) or isinstance(memory_base, bool) or memory_base < 0:
+        raise ValueError("Memory base must be a non-negative integer")
+
+    info = inspect_ps3_elf(data)
+    for segment in info["load_segments"]:
+        guest_address = segment["virtual_address"]
+        if guest_address < memory_base:
+            raise ValueError("Load segment is below guest memory base")
+        offset = guest_address - memory_base
+        size = segment["memory_size"]
+        if offset > len(memory) or size > len(memory) - offset:
+            raise ValueError("Load segment exceeds guest memory bounds")
+
+    raw = bytes(data)
+    for segment in info["load_segments"]:
+        offset = segment["virtual_address"] - memory_base
+        file_offset = segment["file_offset"]
+        file_size = segment["file_size"]
+        memory_size = segment["memory_size"]
+        memory[offset:offset + memory_size] = b"\\x00" * memory_size
+        memory[offset:offset + file_size] = raw[file_offset:file_offset + file_size]
+
+    return info["entry_point"]
