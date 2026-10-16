@@ -17,6 +17,10 @@ typedef enum {
 
 /*
  * Translate a deliberately small PowerPC subset into AArch64 words.
+ * Supports arithmetic/logical instructions plus local relative unconditional
+ * branches (b) whose targets are inside the supplied sequence. Conditional,
+ * absolute, linked, and out-of-sequence branches are rejected. Local branches
+ * are relocated after all generated instruction offsets are known.
  * Every PowerPC GPR r0-r31 is stored in a 256-byte stack frame; x16/x17 are
  * temporary scratch registers. Initial PowerPC GPRs are zero. The generated
  * function returns the selected GPR in x0 and restores SP before returning.
