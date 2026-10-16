@@ -6,44 +6,43 @@ Experimental research project exploring translation of a **small subset of Power
 
 ## What exists today
 
-- A small PowerPC instruction decoder and reference interpreter, including `or` register logic and bounded execution directly from guest-memory buffers for a tiny instruction subset.
+- A small PowerPC instruction decoder and reference interpreter, including logical operations and bounded execution for a tiny instruction subset.
 - A defensive PS3-style ELF64/PowerPC64 metadata inspector and bounded PT_LOAD segment mapper; this is not a complete SELF/ELF game loader.
-- Experimental ARM64 instruction encoding for a limited instruction subset, including register-form `ORR`, 64-bit `MUL`, and PowerPC `mulld` decode/reference-execution/translation coverage. The record-setting form remains explicitly unsupported.
-- A basic block translator with limited local relative branch support, plus explicit rejection tests for unsupported absolute/linked branches, `r31`, record-form `add`, and misaligned program addresses.
-- A C native runtime API and CMake build that produces a shared library.
-- Python unit tests and a native-runtime smoke test run by GitHub Actions.
+- Experimental Python instruction encoding and translation tools for a limited instruction subset.
+- A new bounded C PowerPC-to-ARM64 translator for ADDI, ADD, SUBF, MULLD, OR, AND, and XOR. It rejects unsupported instructions and restricts the register mapping to caller-saved ARM64 registers.
+- An Android JNI smoke-test path that translates a **fixed built-in PowerPC arithmetic program**, executes the generated ARM64 words, and compares the result against the reference interpreter. It never accepts executable bytes from a selected game file.
+- CMake tests for translation encodings and for executing the translated program on AArch64, plus Python unit tests and Android APK build checks.
+- A basic block translator with limited local relative branch support and explicit rejection tests for unsupported control-flow cases.
 
-The ELF-to-CPU test uses a synthetic ELF with two simple `addi` instructions. It validates this narrow prototype path only; it does not demonstrate compatibility with a real PS3 executable.
+The ELF-to-CPU test uses a synthetic ELF with simple instructions. It validates this narrow prototype path only; it does not demonstrate compatibility with a real PS3 executable.
 
 ## Important limitations
 
-- The generated ARM64 bytes are **not yet connected to the translator or Android app**; the integrated engine still reports `native_execution: false`.
-- The native runtime smoke test validates API errors on the CI host. The actual machine-code execution test runs only on AArch64 and is skipped on the current x86-64 hosted runner.
+- The new C translator and Android bridge cover only a tiny fixed arithmetic test. They are **not yet a complete connection to the Python translator or integrated engine**, which continues to report `native_execution: false`.
+- The generated-code execution test only proves the small supported subset when it passes on an AArch64 runtime. An x86-64 host can validate translation and error handling but cannot execute AArch64 instructions.
 - The supported PowerPC instruction set is tiny and does not represent a complete PPU implementation.
-- Register `r31` has no real spill/load implementation. The simple pipeline rejects translations that use it rather than pretending ARM64 `x31` is an ordinary general-purpose register.
-- Branch support is limited; linking, absolute branches, conditional branches in generated ARM64, and many control-flow cases are unsupported. The safety tests ensure known unsupported cases fail clearly rather than being silently translated.
-- There is no complete PS3 system emulation, SPU emulation, memory model, operating-system layer, or graphics implementation.
+- Register spill/load support, full PowerPC condition-register behavior, broad branch handling, SPU emulation, PS3 memory/OS services, and RSX graphics are not implemented.
+- No PS3 title has booted in this project. The graphics demo activities are standalone prototypes, not PS3 rendering.
 
 ## Build and test
 
 With CMake, a C compiler, and Python 3.12 installed:
 
 ```sh
-cmake -S . -B build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 python -m unittest discover -s tests -v
 ```
 
-The CMake build produces the `ps3_arm64_runtime` shared library and a smoke-test executable. A green test run verifies only the tests that exist; it does **not** prove that ARM64 code executed on the CI host or that PS3 games are compatible.
+The CI workflow runs host tests, attempts the translated-code execution test on a native ARM64 runner, and builds the Android debug APK. A green build verifies only the tests that exist; it does **not** prove that PS3 games are compatible.
 
 ## Current priorities
 
-1. Connect the translator's machine-code output to the native runtime through a well-defined API.
-2. Add an Android NDK build and JNI boundary, then test on an actual ARM64 Android device.
-3. Establish a reproducible ARM64 native-execution test harness.
-4. Implement correct register spill/load support and broader instruction coverage with reference-versus-translator tests.
-5. Work toward the much larger PPU/SPU, memory, OS, and graphics requirements of a PS3 emulator.
+1. Confirm generated-code execution on the ARM64 CI runner and on an actual ARM64 Android device.
+2. Connect the Python translator's supported output to the native execution API with explicit validation and reference-result comparisons.
+3. Add correct register spill/load support, condition-register behavior, and broader instruction coverage with differential tests.
+4. Build out the much larger PPU/SPU, memory, OS, and graphics requirements needed by a real emulator.
 
 See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md).
 
@@ -51,10 +50,10 @@ For the practical route toward real Android gameplay, see [Fastest path to PS3 g
 
 ## Continuous integration
 
-The `.github/workflows/prototype-validation.yml` workflow runs the host-side C/Python test suites and builds the Android debug APK. When the Android build job succeeds, its APK is uploaded as the `ps3-translator-prototype-debug` workflow artifact.
+The `.github/workflows/prototype-validation.yml` workflow runs host-side C/Python tests, an ARM64 native execution job, and an Android debug APK build. When the Android build job succeeds, its APK is uploaded as the `ps3-translator-prototype-debug` workflow artifact.
 
-A successful build proves that the prototype compiles and that its existing tests pass; it does not prove that generated ARM64 code is executed by the translator, nor that any PS3 game is compatible.
+A successful build proves that the prototype compiles and its tests pass; it does not prove that any PS3 game is compatible.
 
 ## Next practical milestone
 
-Connect the actual translator output to a narrowly scoped native execution test, compare the result with the reference interpreter, and run that test on an ARM64 Android device. Keep unsupported instructions rejected explicitly. Full PS3 game support remains a much larger project requiring CPU, SPU, memory, operating-system, and graphics emulation.
+Verify the bounded translated-code test on the ARM64 runner and a physical Android device. Then connect the Python translation pipeline to the same validated execution API. Keep unsupported instructions rejected explicitly. Full PS3 game support remains a much larger project requiring CPU, SPU, memory, operating-system, and graphics emulation.
