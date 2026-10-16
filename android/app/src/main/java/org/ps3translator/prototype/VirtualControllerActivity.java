@@ -112,7 +112,7 @@ public final class VirtualControllerActivity extends Activity {
         column.addView(caption);
         AnalogStickView stick = new AnalogStickView(this, (x, y) ->
             status.setText(label + String.format(java.util.Locale.ROOT, ": X %.2f, Y %.2f", x, y)));
-        column.addView(stick, new LinearLayout.LayoutParams(0, 170, 1));
+        column.addView(stick, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 170));
         parent.addView(column, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
     }
 
