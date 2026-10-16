@@ -4,7 +4,7 @@ import struct
 import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from prototype.elf_loader import inspect_ps3_elf, ELF_HEADER, PROGRAM_HEADER
+from prototype.elf_loader import inspect_ps3_elf, load_elf_segments, ELF_HEADER, PROGRAM_HEADER
 
 
 def make_elf(machine=21, elf_class=2, endian=2, truncate=False):
@@ -46,6 +46,22 @@ class PS3ELFLoaderTests(unittest.TestCase):
     def test_rejects_non_elf(self):
         with self.assertRaisesRegex(ValueError, "ELF magic"):
             inspect_ps3_elf(b"not an elf file")
+
+    def test_loads_segment_and_zero_fills_bss(self):
+        data = make_elf()
+        memory = bytearray(0x100)
+        entry = load_elf_segments(data, memory, memory_base=0x10000)
+        self.assertEqual(entry, 0x10000)
+        self.assertEqual(memory[:4], b"TEST")
+        self.assertEqual(memory[4:8], b"\\x00" * 4)
+
+    def test_rejects_segment_outside_guest_memory(self):
+        with self.assertRaisesRegex(ValueError, "bounds"):
+            load_elf_segments(make_elf(), bytearray(4), memory_base=0x10000)
+
+    def test_rejects_segment_below_guest_memory_base(self):
+        with self.assertRaisesRegex(ValueError, "below"):
+            load_elf_segments(make_elf(), bytearray(0x100), memory_base=0x10001)
 
 
 if __name__ == "__main__":
