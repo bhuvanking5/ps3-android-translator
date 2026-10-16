@@ -3,13 +3,18 @@
 #include "arm64_runtime.h"
 
 /*
- * Fixed, built-in ARM64 smoke test only:
- *   mov x0, #42
+ * Fixed, built-in ARM64 integration test only:
+ *   mov x0, #7
+ *   mov x1, #19
+ *   sub x0, x1, x0
  *   ret
+ * Expected result: 12.
  * Never pass bytes from game files or downloads to this runtime.
  */
 static const uint32_t kSmokeTestCode[] = {
-    0xD2800540u,
+    0xD28000E0u,
+    0xD2800261u,
+    0xCB000020u,
     0xD65F03C0u
 };
 
@@ -21,12 +26,12 @@ Java_org_ps3translator_prototype_MainActivity_nativeStatus(JNIEnv *env, jclass c
         (const uint8_t *)kSmokeTestCode, sizeof(kSmokeTestCode), &result);
 
     const char *message;
-    if (status == ARM64_RUNTIME_OK && result == 42) {
-        message = "Native ARM64 smoke test PASSED (42). PS3 games are not supported yet.";
+    if (status == ARM64_RUNTIME_OK && result == 12) {
+        message = "Native ARM64 multi-instruction test PASSED (19 - 7 = 12). PS3 games are not supported yet.";
     } else if (status == ARM64_RUNTIME_UNSUPPORTED_ARCH) {
         message = "Native runtime loaded; ARM64 execution is unsupported on this device.";
     } else {
-        message = "Native runtime loaded; ARM64 smoke test could not execute. PS3 games are not supported yet.";
+        message = "Native runtime loaded; ARM64 multi-instruction test could not execute. PS3 games are not supported yet.";
     }
     return (*env)->NewStringUTF(env, message);
 }
