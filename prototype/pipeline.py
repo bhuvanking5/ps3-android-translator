@@ -12,7 +12,7 @@ def _require_supported_registers(ins):
         # PowerPC addi treats RA=0 as a literal zero, not as GPR r0.
         if ins["ra"] != 0:
             registers.append(ins["ra"])
-    elif op in ("add", "or", "subf"):
+    elif op in ("add", "or", "subf", "mulld"):
         registers.extend([ins["ra"], ins["rb"]])
 
     if 31 in registers:
@@ -37,7 +37,7 @@ def translate_word(word):
             raise ValueError("PowerPC branch displacement must be 4-byte aligned")
         return [f"    b #{displacement}"]
 
-    if op in ("addi", "add", "or", "subf"):
+    if op in ("addi", "add", "or", "subf", "mulld"):
         _require_supported_registers(ins)
 
     if op == "addi":
@@ -79,6 +79,11 @@ def translate_word(word):
         right = f'x{ins["rb"]}'
 
         return [f"    add {dst}, {left}, {right}"]
+
+    if op == "mulld":
+        if ins["record"]:
+            raise ValueError("The mulld record form is not supported yet")
+        return [f'    mul x{ins["rt"]}, x{ins["ra"]}, x{ins["rb"]}']
 
     if op == "subf":
         if ins["record"]:
