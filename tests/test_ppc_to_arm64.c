@@ -73,6 +73,16 @@ int main(void) {
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
     CHECK(output[70] == 0x17FFFFFEu); /* B from the relocated branch back to the previous ADDI */
 
+    /* ORI/XORI immediate forms use RT as source and RA as destination. */
+    const logical_immediate[] = {
+        (14u << 26) | (3u << 21) | 0x0F0Fu,
+        (24u << 26) | (3u << 21) | (4u << 16) | 0x00F0u,
+        (26u << 26) | (4u << 21) | (5u << 16) | 0x0F00u
+    };
+    CHECK(ppc_translate_to_arm64(logical_immediate, 3, 5, output,
+          PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
+    CHECK(output_count > 64u);
+
     /* cmpwi plus bc emits signed compare, CR bits, and relocatable CBZ/CBNZ. */
     const uint32_t cmpwi = (11u << 26) | (3u << 16) | 7u;
     const uint32_t bc_equal = (16u << 26) | (12u << 21) |
