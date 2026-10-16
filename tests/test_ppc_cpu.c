@@ -20,6 +20,13 @@ int main(void) {
     assert(gpr[3] == 7 && gpr[4] == 12 && gpr[5] == 19 && gpr[6] == 12);
 
     memset(gpr, 0, sizeof(gpr));
+    const uint32_t arithmetic[] = {
+        addi(3, 0, 6), addi(4, 0, 7), xo(5, 3, 4, 233), xo(5, 5, 3, 444)
+    };
+    assert(ppc_cpu_run(arithmetic, 4, gpr) == PPC_CPU_OK);
+    assert(gpr[5] == (42u | 6u));
+
+    memset(gpr, 0, sizeof(gpr));
     const uint32_t negative[] = { addi(3, 0, -2) };
     assert(ppc_cpu_run(negative, 1, gpr) == PPC_CPU_OK);
     assert(gpr[3] == UINT64_MAX - 1u);
