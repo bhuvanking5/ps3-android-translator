@@ -24,6 +24,10 @@ class NativeBindingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ps3_native.execute_u64(b"x")
 
+    def test_rejects_oversized_code(self):
+        with self.assertRaisesRegex(ValueError, "1..4096 bytes"):
+            ps3_native.execute_u64(b"\\x00" * 4100)
+
     @unittest.skipIf(
         platform.machine().lower() in ("aarch64", "arm64"),
         "unsupported-architecture error is not expected on ARM64",
