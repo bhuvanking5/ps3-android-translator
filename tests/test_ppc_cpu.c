@@ -35,7 +35,7 @@ int main(void) {
     memset(gpr, 0, sizeof(gpr));
     const uint32_t logical[] = {
         addi(3, 0, 12), addi(4, 0, 10),
-        xo(5, 3, 4, 28), xo(6, 3, 4, 316), xo(7, 3, 4, 444)
+        xo(3, 5, 4, 28), xo(3, 6, 4, 316), xo(3, 7, 4, 444)
     };
     CHECK(ppc_cpu_run(logical, 5, gpr) == PPC_CPU_OK);
     CHECK(gpr[5] == 8u && gpr[6] == 6u && gpr[7] == 14u);
