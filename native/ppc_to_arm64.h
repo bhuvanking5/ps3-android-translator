@@ -17,8 +17,8 @@ typedef enum {
 
 /*
  * Translate a deliberately small PowerPC subset into AArch64 words.
- * Supports arithmetic/logical instructions including ori/xori immediates,
- * signed-word cmpwi, local relative
+ * Supports arithmetic/logical instructions including ori/xori immediates and signed
+ * immediate `mulli`, plus signed-word cmpwi, local relative
  * unconditional b, and bc for BO=4/12 using a selected CR bit. Branch targets
  * must be inside the supplied sequence; absolute/linked branches and other BO
  * forms are rejected. Local branches are relocated after offsets are known.
