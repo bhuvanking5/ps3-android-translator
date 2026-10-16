@@ -64,14 +64,14 @@ int main(void) {
     };
     CHECK(ppc_translate_to_arm64(forward_branch, 3, 4, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
-    CHECK(output[34] == 0x14000002u); /* B from translated word 34 to word 36 */
+    CHECK(output[34] == 0x14000003u); /* B skips the two-word ADDI and lands at the next block */
 
     const uint32_t backward_branch[] = {
         addi(3, 0, 1), addi(4, 0, 2), branch(-4, 0, 0)
     };
     CHECK(ppc_translate_to_arm64(backward_branch, 3, 4, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
-    CHECK(output[36] == 0x17FFFFFFu); /* B from word 36 back to word 35 */
+    CHECK(output[38] == 0x17FFFFFEu); /* B from word 38 back to the previous ADDI */
 
     const uint32_t out_of_range_branch[] = { branch(8, 0, 0), addi(3, 0, 1) };
     CHECK(ppc_translate_to_arm64(out_of_range_branch, 2, 3, output,
