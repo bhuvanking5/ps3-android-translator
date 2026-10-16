@@ -3,7 +3,8 @@
 ## Implemented
 
 - The C native runtime validates arguments and uses write-then-execute memory permissions on AArch64.
-- A bounded C PowerPC-to-ARM64 translator emits a restricted instruction subset: ADDI, ADD, SUBF, MULLD, OR, AND, and XOR.
+- A bounded C PowerPC-to-ARM64 translator emits a restricted instruction subset: ADDI, ADD, SUBF, MULLD, OR, AND, XOR, and local relative unconditional `b` branches. Branches are relocated after emitted instruction offsets are known; conditional, absolute, linked, and out-of-sequence branches are rejected.
+- Local branch translation is currently encoding-only: the reference PowerPC interpreter and `translate_and_execute_ppc` path do not yet support branch execution, and branch loops are not yet safely executable through that API.
 - The translator stores all 32 PowerPC GPRs in a 256-byte stack frame and uses x16/x17 as temporary registers; generated code restores SP before returning.
 - The Android JNI smoke-test path runs a fixed, built-in PowerPC arithmetic program through both the reference interpreter and the C translator, executes the generated ARM64 words, and compares the result.
 - The optional CPython extension now exposes `translate_and_execute_ppc(instruction_words, result_gpr)`. It accepts a sequence of 32-bit PowerPC words, enforces the instruction/register limits, translates only supported instructions, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
