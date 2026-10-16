@@ -240,6 +240,25 @@ ppc_to_arm64_status ppc_translate_to_arm64(
             continue;
         }
 
+        if (opcode == 24u || opcode == 26u) {
+            /* ORI/XORI: RT is the source register; RA is the destination. */
+            const unsigned immediate = ins & 0xffffu;
+            const uint32_t logical_base = opcode == 24u ? 0xAA000000u
+                                                         : 0xCA000000u;
+            if (!emit_gpr_load(output, output_capacity, &used,
+                               SCRATCH_A, rt) ||
+                !emit(output, output_capacity, &used,
+                      movz(SCRATCH_B, immediate)) ||
+                !emit(output, output_capacity, &used,
+                      logical_reg(logical_base, SCRATCH_A,
+                                  SCRATCH_A, SCRATCH_B)) ||
+                !emit_gpr_store(output, output_capacity, &used,
+                                SCRATCH_A, ra)) {
+                return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+            }
+            continue;
+        }
+
         if (opcode == 31u) {
             const unsigned xo = (ins >> 1) & 0x3ffu;
             if ((ins & 1u) != 0u) {
