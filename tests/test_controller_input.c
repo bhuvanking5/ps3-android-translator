@@ -25,6 +25,32 @@ int main(void) {
     CHECK(report.right_x == 255u);
     CHECK(report.right_y == 64u);
 
+    /* The stable word adapter zero-extends axes and preserves button flags. */
+    uint32_t word = 0xFFFFFFFFu;
+    CHECK(ps3_controller_report_read_word(&report,
+        PS3_CONTROLLER_WORD_BUTTONS, &word) == PS3_CONTROLLER_WORD_OK);
+    CHECK(word == 0x15u);
+    CHECK(ps3_controller_report_read_word(&report,
+        PS3_CONTROLLER_WORD_LEFT_X, &word) == PS3_CONTROLLER_WORD_OK);
+    CHECK(word == 0u);
+    CHECK(ps3_controller_report_read_word(&report,
+        PS3_CONTROLLER_WORD_LEFT_Y, &word) == PS3_CONTROLLER_WORD_OK);
+    CHECK(word == 159u);
+    CHECK(ps3_controller_report_read_word(&report,
+        PS3_CONTROLLER_WORD_RIGHT_X, &word) == PS3_CONTROLLER_WORD_OK);
+    CHECK(word == 255u);
+    CHECK(ps3_controller_report_read_word(&report,
+        PS3_CONTROLLER_WORD_RIGHT_Y, &word) == PS3_CONTROLLER_WORD_OK);
+    CHECK(word == 64u);
+    CHECK(ps3_controller_report_read_word(&report,
+        PS3_CONTROLLER_WORD_COUNT, &word) ==
+        PS3_CONTROLLER_WORD_INVALID_INDEX);
+    CHECK(ps3_controller_report_read_word(0, PS3_CONTROLLER_WORD_BUTTONS,
+        &word) == PS3_CONTROLLER_WORD_INVALID_ARGUMENT);
+    CHECK(ps3_controller_report_read_word(&report,
+        PS3_CONTROLLER_WORD_BUTTONS, 0) ==
+        PS3_CONTROLLER_WORD_INVALID_ARGUMENT);
+
     ps3_controller_input_publish(0u, 2.0f, -2.0f, NAN, INFINITY);
     state = ps3_controller_input_read();
     CHECK(state.pressed_mask == 0u);
