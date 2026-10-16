@@ -122,6 +122,16 @@ class ProgramTests(unittest.TestCase):
             run_memory_program(CPUState(), memory, memory_base=0,
                                start_pc=0, code_size=4, max_steps=2)
 
+    def test_memory_runner_requires_bytearray(self):
+        with self.assertRaisesRegex(ValueError, "bytearray"):
+            run_memory_program(CPUState(), b"\\x00\\x00\\x00\\x00",
+                               memory_base=0, start_pc=0, code_size=4)
+
+    def test_memory_runner_rejects_boolean_address(self):
+        with self.assertRaisesRegex(ValueError, "memory_base"):
+            run_memory_program(CPUState(), bytearray(4), memory_base=True,
+                               start_pc=0, code_size=4)
+
 if __name__ == "__main__":
     unittest.main()
       
