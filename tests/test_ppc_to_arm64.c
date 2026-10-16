@@ -15,6 +15,11 @@ static uint32_t addi(unsigned rt, unsigned ra, int imm) {
            ((uint32_t)imm & 0xffffu);
 }
 
+static uint32_t branch(int displacement, unsigned absolute, unsigned link) {
+    return (18u << 26) | ((uint32_t)displacement & 0x03FFFFFCu) |
+           ((absolute & 1u) << 1) | (link & 1u);
+}
+
 static uint32_t xo(unsigned rt, unsigned ra, unsigned rb, unsigned ext) {
     return (31u << 26) | (rt << 21) | (ra << 16) |
            (rb << 11) | (ext << 1);
@@ -52,6 +57,31 @@ int main(void) {
     const uint32_t large_immediate[] = { addi(31, 2, 12000) };
     CHECK(ppc_translate_to_arm64(large_immediate, 1, 31, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
+
+    /* Local relative branches are patched after translated instruction offsets are known. */
+    const uint32_t forward_branch[] = {
+        branch(8, 0, 0), addi(3, 0, 1), addi(4, 0, 2)
+    };
+    CHECK(ppc_translate_to_arm64(forward_branch, 3, 4, output,
+          PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
+    CHECK(output[34] == 0x14000002u); /* B from translated word 34 to word 36 */
+
+    const uint32_t backward_branch[] = {
+        addi(3, 0, 1), addi(4, 0, 2), branch(-4, 0, 0)
+    };
+    CHECK(ppc_translate_to_arm64(backward_branch, 3, 4, output,
+          PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
+    CHECK(output[36] == 0x17FFFFFFu); /* B from word 36 back to word 35 */
+
+    const uint32_t out_of_range_branch[] = { branch(8, 0, 0), addi(3, 0, 1) };
+    CHECK(ppc_translate_to_arm64(out_of_range_branch, 2, 3, output,
+          PPC_TO_ARM64_MAX_WORDS, &output_count) ==
+          PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION);
+    CHECK(output_count == 0);
+    const uint32_t linked_branch[] = { branch(4, 0, 1), addi(3, 0, 1) };
+    CHECK(ppc_translate_to_arm64(linked_branch, 2, 3, output,
+          PPC_TO_ARM64_MAX_WORDS, &output_count) ==
+          PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION);
 
     const uint32_t unsupported[] = { 0x40000004u };
     CHECK(ppc_translate_to_arm64(unsupported, 1, 3, output,
