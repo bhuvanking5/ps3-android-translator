@@ -59,6 +59,18 @@ def decode_word(word):
                 "record": bool(word & 1),
             }
 
+    # or RA, RS, RB — extended opcode 444 (record bit is handled separately).
+    if opcode == 31:
+        extended_opcode = (word >> 1) & 0x3FF
+        if extended_opcode == 444:
+            return {
+                "mnemonic": "or",
+                "rt": (word >> 21) & 0x1F,
+                "ra": (word >> 16) & 0x1F,
+                "rb": (word >> 11) & 0x1F,
+                "record": bool(word & 1),
+            }
+
     raise ValueError(f"Unsupported PowerPC instruction: 0x{word:08X}")
 
 
