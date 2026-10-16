@@ -3,6 +3,8 @@ package org.ps3translator.prototype;
 import android.app.Activity;
 import android.os.Bundle;
 import android.graphics.Color;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -79,10 +81,10 @@ public final class VirtualControllerActivity extends Activity {
         middle.addView(actions, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
         LinearLayout sticks = row(root);
-        addTouchButton(sticks, "Left stick", "LEFT STICK");
+        addStick(sticks, "Left stick");
         addTouchButton(sticks, "L3", "L3");
         addTouchButton(sticks, "R3", "R3");
-        addTouchButton(sticks, "Right stick", "RIGHT STICK");
+        addStick(sticks, "Right stick");
 
         Button back = new Button(this);
         back.setText("Back to main screen");
@@ -97,6 +99,60 @@ public final class VirtualControllerActivity extends Activity {
         row.setPadding(0, 5, 0, 5);
         parent.addView(row);
         return row;
+    }
+
+    private void addStick(LinearLayout parent, String label) {
+        LinearLayout column = new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setGravity(Gravity.CENTER);
+        TextView caption = new TextView(this);
+        caption.setText(label);
+        caption.setTextColor(Color.WHITE);
+        caption.setGravity(Gravity.CENTER);
+        column.addView(caption);
+        AnalogStickView stick = new AnalogStickView(this, (x, y) ->
+            status.setText(label + String.format(java.util.Locale.ROOT, ": X %.2f, Y %.2f", x, y)));
+        column.addView(stick, new LinearLayout.LayoutParams(0, 170, 1));
+        parent.addView(column, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+    }
+
+    private interface AxisListener { void onAxes(float x, float y); }
+
+    /** On-screen analog stick; reports normalized local axes from -1 to 1. */
+    private static final class AnalogStickView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final AxisListener listener;
+        private float xAxis, yAxis, centerX, centerY, radius;
+
+        AnalogStickView(Activity context, AxisListener listener) {
+            super(context); this.listener = listener; setFocusable(true);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            centerX = getWidth() / 2f; centerY = getHeight() / 2f;
+            radius = Math.max(1f, Math.min(getWidth(), getHeight()) * 0.38f);
+            paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(4f); paint.setColor(Color.LTGRAY);
+            canvas.drawCircle(centerX, centerY, radius, paint);
+            paint.setStyle(Paint.Style.FILL); paint.setColor(Color.rgb(65, 145, 220));
+            canvas.drawCircle(centerX + xAxis * radius, centerY + yAxis * radius, radius * 0.28f, paint);
+        }
+
+        @Override public boolean onTouchEvent(MotionEvent event) {
+            if (event.getAction() == MotionEvent.ACTION_DOWN || event.getAction() == MotionEvent.ACTION_MOVE) {
+                float dx = (event.getX() - centerX) / radius;
+                float dy = (event.getY() - centerY) / radius;
+                float length = (float) Math.sqrt(dx * dx + dy * dy);
+                if (length > 1f) { dx /= length; dy /= length; }
+                xAxis = Math.max(-1f, Math.min(1f, dx));
+                yAxis = Math.max(-1f, Math.min(1f, dy));
+                listener.onAxes(xAxis, -yAxis); invalidate(); return true;
+            }
+            if (event.getAction() == MotionEvent.ACTION_UP || event.getAction() == MotionEvent.ACTION_CANCEL) {
+                xAxis = 0f; yAxis = 0f; listener.onAxes(0f, 0f); invalidate(); return true;
+            }
+            return true;
+        }
     }
 
     private void addTouchButton(LinearLayout parent, String label, String inputName) {
