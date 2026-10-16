@@ -40,6 +40,12 @@ def encode_instruction(assembly):
     parts = assembly.strip().lower().split(None, 1)
     if parts == ["ret"]:
         return 0xD65F03C0
+    if len(parts) == 2 and parts[0] == "ret":
+        operands = [item.strip() for item in parts[1].split(",")]
+        if len(operands) != 1:
+            raise ValueError("RET expects one register operand")
+        rn = _register(operands[0])
+        return 0xD65F0000 | (rn << 5)
     if len(parts) != 2:
         raise ValueError("Invalid assembly instruction")
 
