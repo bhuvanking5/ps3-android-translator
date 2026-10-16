@@ -48,7 +48,7 @@ int arm64_execute_u64(const uint8_t *code, size_t code_size, uint64_t *result) {
     arm64_function_t function = (arm64_function_t)memory;
     *result = function();
 
-    if (munmap(memory, (size_t)page_size) != 0) {
+    if (munmap(memory, allocation_size) != 0) {
         return ARM64_RUNTIME_SYSTEM_ERROR;
     }
     return ARM64_RUNTIME_OK;
