@@ -24,6 +24,19 @@ target_include_directories(test_ppc_to_arm64 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR
 target_compile_options(test_ppc_to_arm64 PRIVATE -Wall -Wextra -Werror)
 add_test(NAME ppc_to_arm64_translation COMMAND test_ppc_to_arm64)
 
+add_executable(test_ppc_to_arm64_execution
+  tests/test_ppc_to_arm64_execution.c
+  native/ppc_to_arm64.c
+  native/arm64_runtime.c
+  android/app/src/main/cpp/ppc_cpu.c
+)
+target_include_directories(test_ppc_to_arm64_execution PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/native"
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_ppc_to_arm64_execution PRIVATE -Wall -Wextra -Werror)
+add_test(NAME ppc_to_arm64_execution COMMAND test_ppc_to_arm64_execution)
+
 option(PS3_TRANSLATOR_BUILD_PYTHON_BINDING "Build the optional CPython extension" OFF)
 if(PS3_TRANSLATOR_BUILD_PYTHON_BINDING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
