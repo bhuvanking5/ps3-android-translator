@@ -13,7 +13,7 @@ Experimental research project exploring translation of a **small subset of Power
 - An optional CPython extension API, `ps3_native.translate_and_execute_ppc(words, result_gpr)`, that accepts PowerPC instruction words, validates and translates the supported subset, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
 - A Python wrapper at `prototype/native_execution.py` for calling that optional native API.
 - An Android JNI smoke-test path that translates a fixed built-in PowerPC arithmetic program, executes the generated ARM64 words, and compares the result against the reference interpreter. It never accepts executable bytes from a selected game file.
-- A virtual controller UI publishes button bits and normalized analog-stick axes into a native input mailbox, with host-side C tests for input range handling. This is an integration seam only; no PS3 emulation loop consumes it yet. The native adapter also exposes a generic report with button flags and 8-bit axes (0/128/255 = negative/center/positive), covered by host tests. A stable five-word adapter exposes button flags and each axis as zero-extended 32-bit values. A read-only guest-I/O-shaped adapter maps those fields at a synthetic prototype address range and rejects unaligned/out-of-range reads; these are test addresses, not real PS3 hardware registers, and the PowerPC interpreter does not yet call this adapter. A bounded prototype runtime harness now runs the supported reference-CPU slice and returns a controller snapshot alongside the resulting registers; the interpreter still does not read these words or consume input, and PS3 system services are not emulated.
+- A virtual controller UI publishes button bits and normalized analog-stick axes into a native input mailbox, with host-side C tests for input range handling. This is an integration seam only; no PS3 emulation loop consumes it yet. The native adapter also exposes a generic report with button flags and 8-bit axes (0/128/255 = negative/center/positive), covered by host tests. A stable five-word adapter exposes button flags and each axis as zero-extended 32-bit values. A read-only guest-I/O adapter maps those fields at a synthetic prototype address range and rejects unaligned/out-of-range reads; these are test addresses, not real PS3 hardware registers. The bounded PowerPC interpreter now supports callback-backed `lwz` reads, with `addis` available to form the synthetic controller base address. The prototype runtime supplies one stable controller snapshot as the callback context, so a small guest instruction sequence can read the button word. This is not general guest RAM, real PS3 MMIO, or a game-input path.
 - CMake tests for translation encodings, native execution, and Python-binding input validation, plus Android APK build checks.
 - A Python basic-block planner that splits supported instruction sequences around relative unconditional branches, builds explicit successor edges, and rejects conditional, absolute, linked, or out-of-range control flow.
 
@@ -22,7 +22,7 @@ The ELF-to-CPU test uses a synthetic ELF with simple instructions. It validates 
 ## Important limitations
 
 - The new native API is a **small arithmetic proof of concept**, not a complete connection from every Python translator output or the integrated engine. The integrated engine continues to report `native_execution: false`.
-- The supported PowerPC instruction set is tiny and does not represent a complete PPU implementation. The current native execution API accepts only 1–256 32-bit instruction words and only the explicitly supported straight-line subset.
+- The supported PowerPC instruction set is tiny and does not represent a complete PPU implementation. The current native execution API accepts only 1–256 32-bit instruction words and only the explicitly supported subset. `lwz` reads are permitted only through the supplied callback; unmapped reads fail explicitly.
 - Generated ARM64 execution requires an AArch64 process. On x86-64 hosts, tests verify translation, rejection behavior, and the unsupported-architecture response.
 - Full PowerPC condition-register behavior, broad branch handling, SPU emulation, PS3 memory/OS services, and RSX graphics are not implemented. Stack-backed GPR storage is implemented only for the supported straight-line instruction subset.
 - No PS3 title has booted in this project. The graphics demo activities are standalone prototypes, not PS3 rendering.
@@ -54,8 +54,8 @@ The CI workflow runs host tests, attempts the translated-code execution test on 
 
 ## Current priorities
 
-1. Confirm the controller mailbox tests, Android APK build, and native translation tests pass in CI.
-2. Connect the synthetic guest-I/O adapter to the PowerPC interpreter through a defined load/read instruction path; the current CPU does not yet call the adapter.
+1. Confirm the controller mailbox tests, guest-I/O CPU integration tests, Android APK build, and native translation tests pass in CI.
+2. Expand tests for callback-backed loads and define a safe guest-memory model before adding more load/store instructions.
 3. Run the bounded translated-code test on an AArch64 CI runner and on an actual ARM64 Android device.
 4. Connect the Python translator's instruction semantics to the native translator with shared differential tests.
 5. Extend CPU control flow and instruction coverage only after semantics and differential tests are defined.
