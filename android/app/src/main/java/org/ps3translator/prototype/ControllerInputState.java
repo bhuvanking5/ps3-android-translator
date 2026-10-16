@@ -3,9 +3,9 @@ package org.ps3translator.prototype;
 import java.util.Locale;
 
 /**
- * Thread-safe shared snapshot of virtual controller inputs.
- * This is an input-state bridge for the prototype UI only; no PS3 emulator
- * currently consumes this state.
+ * Thread-safe virtual controller state published to a native input mailbox.
+ * The native mailbox is ready for an emulator adapter, but no PS3 emulator
+ * currently consumes it.
  */
 public final class ControllerInputState {
     private static final String[] BUTTONS = {
@@ -23,16 +23,19 @@ public final class ControllerInputState {
         if (index < 0) return;
         int bit = 1 << index;
         pressedMask = pressed ? (pressedMask | bit) : (pressedMask & ~bit);
+        publish();
     }
 
     public static synchronized void setLeftAxes(float x, float y) {
         leftX = clamp(x);
         leftY = clamp(y);
+        publish();
     }
 
     public static synchronized void setRightAxes(float x, float y) {
         rightX = clamp(x);
         rightY = clamp(y);
+        publish();
     }
 
     public static synchronized boolean isPressed(String name) {
@@ -47,6 +50,7 @@ public final class ControllerInputState {
     public static synchronized void releaseAll() {
         pressedMask = 0;
         leftX = leftY = rightX = rightY = 0f;
+        publish();
     }
 
     public static synchronized String snapshot() {
@@ -62,6 +66,14 @@ public final class ControllerInputState {
             "Buttons: %s\nLeft: %.2f, %.2f | Right: %.2f, %.2f",
             buttons, leftX, leftY, rightX, rightY);
     }
+
+    private static void publish() {
+        nativePublish(pressedMask, leftX, leftY, rightX, rightY);
+    }
+
+    /* Native mailbox publisher implemented by translator_bridge. */
+    private static native void nativePublish(
+        int pressedMask, float leftX, float leftY, float rightX, float rightY);
 
     private static int indexOf(String name) {
         for (int i = 0; i < BUTTONS.length; i++) {
