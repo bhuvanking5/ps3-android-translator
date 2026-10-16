@@ -31,8 +31,8 @@ class NativeBindingTests(unittest.TestCase):
             ps3_native.execute_u64(b"x")
 
     def test_rejects_oversized_code(self):
-        with self.assertRaisesRegex(ValueError, "1..4096 bytes"):
-            ps3_native.execute_u64(b"\\x00" * 4100)
+        with self.assertRaisesRegex(ValueError, "1..8192 bytes"):
+            ps3_native.execute_u64(b"\\x00" * 8200)
 
     @unittest.skipIf(
         platform.machine().lower() in ("aarch64", "arm64"),
