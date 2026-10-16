@@ -11,6 +11,18 @@ def decode_word(word):
 
     opcode = (word >> 26) & 0x3F
 
+    # Multiply immediate signed: mulli RT, RA, SI — opcode 7.
+    if opcode == 7:
+        immediate = word & 0xFFFF
+        if immediate & 0x8000:
+            immediate -= 0x10000
+        return {
+            "mnemonic": "mulli",
+            "rt": (word >> 21) & 0x1F,
+            "ra": (word >> 16) & 0x1F,
+            "immediate": immediate,
+        }
+
     # addi RT, RA, SI — opcode 14
     if opcode == 14:
         rt = (word >> 21) & 0x1F
