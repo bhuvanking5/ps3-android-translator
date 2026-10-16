@@ -9,7 +9,7 @@ Experimental research project exploring translation of a **small subset of Power
 - A small PowerPC instruction decoder and reference interpreter, including bounded execution directly from guest-memory buffers for a tiny instruction subset.
 - A defensive PS3-style ELF64/PowerPC64 metadata inspector and bounded PT_LOAD segment mapper; this is not a complete SELF/ELF game loader.
 - Experimental ARM64 instruction encoding for a limited instruction subset.
-- A basic block translator with limited local relative branch support.
+- A basic block translator with limited local relative branch support, plus explicit rejection tests for unsupported absolute/linked branches, `r31`, record-form `add`, and misaligned program addresses.
 - A C native runtime API and CMake build that produces a shared library.
 - Python unit tests and a native-runtime smoke test run by GitHub Actions.
 
@@ -21,7 +21,7 @@ The ELF-to-CPU test uses a synthetic ELF with two simple `addi` instructions. It
 - The native runtime smoke test validates API errors on the CI host. The actual machine-code execution test runs only on AArch64 and is skipped on the current x86-64 hosted runner.
 - The supported PowerPC instruction set is tiny and does not represent a complete PPU implementation.
 - Register `r31` has no real spill/load implementation. The simple pipeline rejects translations that use it rather than pretending ARM64 `x31` is an ordinary general-purpose register.
-- Branch support is limited; linking, absolute branches, and many control-flow cases are unsupported.
+- Branch support is limited; linking, absolute branches, conditional branches in generated ARM64, and many control-flow cases are unsupported. The safety tests ensure known unsupported cases fail clearly rather than being silently translated.
 - There is no complete PS3 system emulation, SPU emulation, memory model, operating-system layer, or graphics implementation.
 
 ## Build and test
