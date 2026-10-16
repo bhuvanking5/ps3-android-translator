@@ -13,6 +13,7 @@ Experimental research project exploring translation of a **small subset of Power
 - An optional CPython extension API, `ps3_native.translate_and_execute_ppc(words, result_gpr)`, that accepts PowerPC instruction words, validates and translates the supported subset, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
 - A Python wrapper at `prototype/native_execution.py` for calling that optional native API.
 - An Android JNI smoke-test path that translates a fixed built-in PowerPC arithmetic program, executes the generated ARM64 words, and compares the result against the reference interpreter. It never accepts executable bytes from a selected game file.
+- A virtual controller UI publishes button bits and normalized analog-stick axes into a native input mailbox, with host-side C tests for input range handling. This is an integration seam only; no PS3 emulation loop consumes it yet.
 - CMake tests for translation encodings, native execution, and Python-binding input validation, plus Android APK build checks.
 - A Python basic-block planner that splits supported instruction sequences around relative unconditional branches, builds explicit successor edges, and rejects conditional, absolute, linked, or out-of-range control flow.
 
@@ -53,12 +54,12 @@ The CI workflow runs host tests, attempts the translated-code execution test on 
 
 ## Current priorities
 
-1. Confirm the new Python native API tests and Android build pass in CI.
-2. Run the bounded translated-code test on an AArch64 CI runner and on an actual ARM64 Android device.
-3. Connect the Python translator's instruction semantics to the native translator with shared differential tests.
-4. Extend basic-block control flow only after condition-register and branch semantics are defined.
-4. Verify stack-backed GPR spill/load on ARM64, then add condition-register behavior and broader instruction coverage.
-5. Build out the much larger PPU/SPU, memory, OS, and graphics requirements needed by a real emulator.
+1. Confirm the controller mailbox tests, Android APK build, and native translation tests pass in CI.
+2. Add a defined adapter from the native controller mailbox to a future emulation input loop; no such loop exists yet.
+3. Run the bounded translated-code test on an AArch64 CI runner and on an actual ARM64 Android device.
+4. Connect the Python translator's instruction semantics to the native translator with shared differential tests.
+5. Extend CPU control flow and instruction coverage only after semantics and differential tests are defined.
+6. Build out the much larger PPU/SPU, memory, OS, and graphics requirements needed by a real emulator.
 
 See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md).
 
