@@ -80,7 +80,7 @@ int main(void) {
     };
     if (check_program("OR/AND/XOR", logical_program,
             sizeof(logical_program) / sizeof(logical_program[0]),
-            7u, 0x0F00u) != 0) {
+            7u, 0x0FF0u) != 0) {
         return 1;
     }
 
