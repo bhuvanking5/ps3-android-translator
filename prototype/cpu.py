@@ -33,6 +33,14 @@ class CPUState:
             ) & MASK64
             self.pc = old_pc + 4
 
+        elif op == "subf":
+            if ins["record"]:
+                raise ValueError("The subf record form is not supported yet")
+            self.gpr[ins["rt"]] = (
+                self.gpr[ins["rb"]] - self.gpr[ins["ra"]]
+            ) & MASK64
+            self.pc = old_pc + 4
+
         elif op == "or":
             if ins["record"]:
                 raise ValueError("The or record form is not supported yet")
