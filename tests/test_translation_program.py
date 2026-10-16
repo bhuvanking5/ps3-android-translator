@@ -41,7 +41,7 @@ class TranslationProgramTests(unittest.TestCase):
         ]
         self.assertEqual(words, [0xD28000E0, 0xD2800261, 0xCB000020])
 
-    def test_multiple_instructions_translate_and_encode_in_order:
+    def test_multiple_instructions_translate_and_encode_in_order(self):
         # r3 = 7; r4 = 19; r5 = r4 - r3 = 12.
         guest_program = [
             ppc_addi(3, 0, 7),
