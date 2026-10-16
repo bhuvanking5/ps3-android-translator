@@ -9,7 +9,7 @@ from prototype.cpu import CPUState
 from prototype.program import run_program
 
 
-def make_elf(machine=21, elf_class=2, endian=2, truncate=False, payload=b"TEST")
+def make_elf(machine=21, elf_class=2, endian=2, truncate=False, payload=b"TEST"):
     ident = bytearray(16)
     ident[:4] = b"\x7fELF"
     ident[4] = elf_class
