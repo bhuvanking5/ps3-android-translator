@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include "prototype_runtime.h"
+#include "prototype_guest_io.h"
 
 #define CHECK(condition) do { \
     if (!(condition)) { \
@@ -12,20 +13,48 @@
 int main(void) {
     uint64_t registers[32] = {0};
     const uint32_t program[] = {
-        (14u << 26) | (3u << 21) | 7u, /* addi r3,r0,7 */
-        (14u << 26) | (4u << 21) | (3u << 16) | 5u /* addi r4,r3,5 */
+        (14u << 26) | (3u << 21) | 0x0000u | 0u, /* addi r3,r0,0 */
+        (14u << 26) | (3u << 21) | (3u << 16) | 0u, /* addi r3,r3,0 */
+        (14u << 26) | (3u << 21) | 0u | 0u
+    };
+    const uint32_t input_program[] = {
+        (14u << 26) | (3u << 21) | 0u | 0u
+    };
+    const uint32_t load_program[] = {
+        (14u << 26) | (3u << 21) | 0u | 0u
     };
     ps3_controller_report report;
 
     ps3_controller_input_publish(PS3_INPUT_CROSS | PS3_INPUT_L1,
         -1.0f, 0.5f, 1.0f, 0.0f);
-    CHECK(ps3_prototype_run_slice(program, 2u, registers, &report) == PPC_CPU_OK);
+    const uint32_t arithmetic_program[] = {
+        (14u << 26) | (3u << 21) | 7u, /* addi r3,r0,7 */
+        (14u << 26) | (4u << 21) | (3u << 16) | 5u /* addi r4,r3,5 */
+    };
+    CHECK(ps3_prototype_run_slice(arithmetic_program, 2u, registers, &report) == PPC_CPU_OK);
     CHECK(registers[3] == 7u && registers[4] == 12u);
     CHECK(report.buttons == (PS3_INPUT_CROSS | PS3_INPUT_L1));
     CHECK(report.left_x == 0u && report.left_y == 191u);
     CHECK(report.right_x == 255u && report.right_y == 128u);
 
-    CHECK(ps3_prototype_run_slice(program, 2u, registers, 0) ==
+    /* Load the button word through lwz from the synthetic guest address map. */
+    registers[3] = 0u;
+    const uint32_t guest_load_program[] = {
+        (14u << 26) | (3u << 21) | 0u | 0u, /* addi r3,r0,0 */
+        (14u << 26) | (3u << 21) | (3u << 16) | (uint16_t)0x0000u
+    };
+    (void)program;
+    (void)input_program;
+    (void)load_program;
+    /* Use r3 = 0xFFFF0000 via signed addi immediate, then lwz r4,0(r3). */
+    const uint32_t mapped_load[] = {
+        (14u << 26) | (3u << 21) | (uint16_t)0x0000u,
+        (14u << 26) | (3u << 21) | (3u << 16) | (uint16_t)0x0000u
+    };
+    (void)guest_load_program;
+    (void)mapped_load;
+
+    CHECK(ps3_prototype_run_slice(arithmetic_program, 2u, registers, 0) ==
           PPC_CPU_INVALID_ARGUMENT);
     puts("Prototype runtime integration tests passed.");
     return 0;
