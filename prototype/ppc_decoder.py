@@ -50,6 +50,15 @@ def decode_word(word):
     # add RT, RA, RB — extended opcode 266
     if opcode == 31:
         extended_opcode = (word >> 1) & 0x3FF
+        if extended_opcode == 233:
+            return {
+                "mnemonic": "mulld",
+                "rt": (word >> 21) & 0x1F,
+                "ra": (word >> 16) & 0x1F,
+                "rb": (word >> 11) & 0x1F,
+                "record": bool(word & 1),
+            }
+
         if extended_opcode == 266:
             return {
                 "mnemonic": "add",
