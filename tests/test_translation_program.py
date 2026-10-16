@@ -45,6 +45,23 @@ class TranslationProgramTests(unittest.TestCase):
         ]
         self.assertEqual(words, [0xD28000E0, 0xD2800261, 0xCB000020])
 
+    def test_guest_program_generates_fixed_native_smoke_bytes(self):
+        # This proves the translator pipeline emits the exact bytes used by
+        # the built-in native smoke test. It does not execute guest-supplied
+        # bytes; native execution remains restricted to the fixed test program.
+        guest_program = [
+            ppc_addi(0, 0, 7),
+            ppc_addi(1, 0, 19),
+            ppc_subf(0, 0, 1),
+        ]
+        translated = translate_program(guest_program, start_address=0x1000)
+        machine_code = encode_program(translated)
+        self.assertEqual(
+            [int.from_bytes(machine_code[i:i + 4], "little")
+             for i in range(0, len(machine_code), 4)],
+            [0xD28000E0, 0xD2800261, 0xCB000020],
+        )
+
     def test_multiple_instructions_translate_and_encode_in_order(self):
         # r3 = 7; r4 = 19; r5 = r4 - r3 = 12.
         guest_program = [
