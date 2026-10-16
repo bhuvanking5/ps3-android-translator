@@ -80,6 +80,21 @@ class TranslationProgramTests(unittest.TestCase):
             0x14000002,
         )
 
+    def test_backward_relative_branch_translates_and_encodes(self):
+        # A branch eight bytes backward uses a signed PC-relative offset.
+        translated = translate_program([ppc_b(-8)], start_address=0x1000)
+        self.assertEqual(translated, ["    b #-8"])
+        machine_code = encode_program(translated)
+        self.assertEqual(
+            int.from_bytes(machine_code, "little"),
+            0x17FFFFFE,
+        )
+
+    def test_unsupported_linked_branch_reports_program_address(self):
+        linked_branch = ppc_b(8) | 1
+        with self.assertRaisesRegex(ValueError, r"0x00001004.*Linked"):
+            translate_program([ppc_b(4), linked_branch], start_address=0x1000)
+
 
 if __name__ == "__main__":
     unittest.main()
