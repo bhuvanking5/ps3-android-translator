@@ -14,7 +14,7 @@ Experimental research project exploring translation of a **small subset of Power
 - A Python wrapper at `prototype/native_execution.py` for calling that optional native API.
 - An Android JNI smoke-test path that translates a fixed built-in PowerPC arithmetic program, executes the generated ARM64 words, and compares the result against the reference interpreter. It never accepts executable bytes from a selected game file.
 - CMake tests for translation encodings, native execution, and Python-binding input validation, plus Android APK build checks.
-- A basic block translator with limited local relative branch support and explicit rejection tests for unsupported control-flow cases.
+- A Python basic-block planner that splits supported instruction sequences around relative unconditional branches, builds explicit successor edges, and rejects conditional, absolute, linked, or out-of-range control flow.
 
 The ELF-to-CPU test uses a synthetic ELF with simple instructions. It validates this narrow prototype path only; it does not demonstrate compatibility with a real PS3 executable.
 
@@ -56,6 +56,7 @@ The CI workflow runs host tests, attempts the translated-code execution test on 
 1. Confirm the new Python native API tests and Android build pass in CI.
 2. Run the bounded translated-code test on an AArch64 CI runner and on an actual ARM64 Android device.
 3. Connect the Python translator's instruction semantics to the native translator with shared differential tests.
+4. Extend basic-block control flow only after condition-register and branch semantics are defined.
 4. Verify stack-backed GPR spill/load on ARM64, then add condition-register behavior and broader instruction coverage.
 5. Build out the much larger PPU/SPU, memory, OS, and graphics requirements needed by a real emulator.
 
