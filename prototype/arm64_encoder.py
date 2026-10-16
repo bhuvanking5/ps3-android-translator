@@ -79,10 +79,8 @@ def encode_instruction(assembly):
 
         rm = _register(operands[2])
 
-        if mnemonic == "add":
-            return 0x8B000000 | (rm << 16) | (rn << 5) | rd
-
-        raise ValueError("Register-form SUB is not supported yet")
+        base = 0x8B000000 if mnemonic == "add" else 0xCB000000
+        return base | (rm << 16) | (rn << 5) | rd
 
     # ORR register (64-bit).
     if mnemonic == "orr" and len(operands) == 3:
