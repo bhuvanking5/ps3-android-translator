@@ -33,6 +33,14 @@ class CPUState:
             ) & MASK64
             self.pc = old_pc + 4
 
+        elif op == "mulld":
+            if ins["record"]:
+                raise ValueError("The mulld record form is not supported yet")
+            self.gpr[ins["rt"]] = (
+                self.gpr[ins["ra"]] * self.gpr[ins["rb"]]
+            ) & MASK64
+            self.pc = old_pc + 4
+
         elif op == "subf":
             if ins["record"]:
                 raise ValueError("The subf record form is not supported yet")
