@@ -83,9 +83,9 @@ static int translate_words(const uint32_t *instructions, size_t count,
                            int result_gpr,
                            uint32_t output[PPC_TO_ARM64_MAX_WORDS],
                            size_t *output_count) {
-    if (result_gpr < 0 || result_gpr >= 18) {
+    if (result_gpr < 0 || result_gpr >= 32) {
         PyErr_SetString(PyExc_ValueError,
-                        "result_gpr must be between 0 and 17");
+                        "result_gpr must be between 0 and 31");
         return 0;
     }
 
@@ -95,7 +95,7 @@ static int translate_words(const uint32_t *instructions, size_t count,
 
     if (status == PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION) {
         PyErr_SetString(PyExc_ValueError,
-                        "program contains an unsupported PowerPC instruction or register");
+                        "program contains an unsupported PowerPC instruction");
         return 0;
     }
     if (status != PPC_TO_ARM64_OK) {
