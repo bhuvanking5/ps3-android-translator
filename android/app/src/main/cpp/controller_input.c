@@ -74,3 +74,22 @@ ps3_controller_report ps3_controller_input_read_report(void) {
     report.right_y = axis_to_u8(input.right_y);
     return report;
 }
+
+/*
+ * Stable word adapter for a future guest-facing memory map. This only reads
+ * an already-created report; it does not make the PowerPC interpreter consume
+ * controller input or imply that a PS3 hardware register map is implemented.
+ */
+ps3_controller_word_status ps3_controller_report_read_word(
+    const ps3_controller_report *report, uint32_t word_index, uint32_t *value) {
+    if (report == 0 || value == 0) return PS3_CONTROLLER_WORD_INVALID_ARGUMENT;
+    switch (word_index) {
+        case PS3_CONTROLLER_WORD_BUTTONS: *value = report->buttons; break;
+        case PS3_CONTROLLER_WORD_LEFT_X: *value = report->left_x; break;
+        case PS3_CONTROLLER_WORD_LEFT_Y: *value = report->left_y; break;
+        case PS3_CONTROLLER_WORD_RIGHT_X: *value = report->right_x; break;
+        case PS3_CONTROLLER_WORD_RIGHT_Y: *value = report->right_y; break;
+        default: return PS3_CONTROLLER_WORD_INVALID_INDEX;
+    }
+    return PS3_CONTROLLER_WORD_OK;
+}
