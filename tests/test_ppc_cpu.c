@@ -13,6 +13,10 @@
 static uint32_t addi(unsigned rt, unsigned ra, int imm) {
     return (14u << 26) | (rt << 21) | (ra << 16) | ((uint32_t)imm & 0xffffu);
 }
+static uint32_t branch(int displacement, unsigned absolute, unsigned link) {
+    return (18u << 26) | ((uint32_t)displacement & 0x03FFFFFCu) |
+           ((absolute & 1u) << 1) | (link & 1u);
+}
 static uint32_t xo(unsigned rt, unsigned ra, unsigned rb, unsigned ext) {
     return (31u << 26) | (rt << 21) | (ra << 16) | (rb << 11) | (ext << 1);
 }
@@ -45,6 +49,20 @@ int main(void) {
     CHECK(ppc_cpu_run(negative, 1, gpr) == PPC_CPU_OK);
     CHECK(gpr[3] == UINT64_MAX - 1u);
 
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t branch_program[] = {
+        addi(3, 0, 1), branch(8, 0, 0), addi(3, 0, 99), addi(4, 0, 7)
+    };
+    CHECK(ppc_cpu_run(branch_program, 4, gpr) == PPC_CPU_OK);
+    CHECK(gpr[3] == 1u && gpr[4] == 7u); /* branch skips the middle ADDI */
+
+    const uint32_t looping_branch[] = { branch(0, 0, 0) };
+    CHECK(ppc_cpu_run(looping_branch, 1, gpr) == PPC_CPU_STEP_LIMIT);
+    const uint32_t out_of_range_branch[] = { branch(8, 0, 0) };
+    CHECK(ppc_cpu_run(out_of_range_branch, 1, gpr) == PPC_CPU_UNSUPPORTED_INSTRUCTION);
+    const uint32_t linked_branch[] = { branch(0, 0, 1) };
+    CHECK(ppc_cpu_run(linked_branch, 1, gpr) == PPC_CPU_UNSUPPORTED_INSTRUCTION);
+
     CHECK(ppc_cpu_run(program, 0, gpr) == PPC_CPU_INSTRUCTION_LIMIT);
     CHECK(ppc_cpu_run(program, PPC_CPU_MAX_INSTRUCTIONS + 1u, gpr) == PPC_CPU_INSTRUCTION_LIMIT);
     const uint32_t unsupported[] = { 0u };
@@ -52,6 +70,6 @@ int main(void) {
     CHECK(ppc_cpu_run(NULL, 1, gpr) == PPC_CPU_INVALID_ARGUMENT);
     CHECK(ppc_cpu_run(program, 1, NULL) == PPC_CPU_INVALID_ARGUMENT);
 
-    puts("PowerPC subset tests passed (ADDI/ADD/SUBF/MULLD/AND/OR/XOR, negative immediate, bounds, unsupported opcode).");
+    puts("PowerPC subset tests passed (arithmetic/logical ops, local branches, step limit, bounds, unsupported instructions).");
     return 0;
 }
