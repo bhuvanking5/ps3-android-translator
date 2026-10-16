@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <stdint.h>
 #include "arm64_runtime.h"
+#include "ppc_cpu.h"
 
 /* Fixed, built-in ARM64 integration test only. Never pass game-file bytes
  * to this runtime. */
@@ -12,44 +13,20 @@ static const uint32_t kSmokeTestCode[] = {
 };
 
 /*
- * Bounded PowerPC64 interpreter smoke test. Supports only ADDI (opcode 14),
- * ADD (opcode 31/XO 266), and SUBF (opcode 31/XO 40). The program and its
- * instruction count are fixed in this test; no selected game data is run.
+ * Fixed built-in PowerPC smoke test. Only the bounded interpreter subset is
+ * exercised; no bytes from selected game files are passed to it.
  */
 static int run_ppc_smoke_test(uint64_t *result) {
     static const uint32_t code[] = {
-        (14u << 26) | (3u << 21) | 7u,                 /* addi r3, r0, 7 */
-        (14u << 26) | (4u << 21) | (3u << 16) | 5u,  /* addi r4, r3, 5 */
-        (31u << 26) | (5u << 21) | (3u << 16) | (4u << 11) | (266u << 1), /* add r5,r3,r4 */
-        (31u << 26) | (6u << 21) | (3u << 16) | (5u << 11) | (40u << 1)  /* subf r6,r3,r5 */
+        (14u << 26) | (3u << 21) | 7u,
+        (14u << 26) | (4u << 21) | (3u << 16) | 5u,
+        (31u << 26) | (5u << 21) | (3u << 16) | (4u << 11) | (266u << 1),
+        (31u << 26) | (6u << 21) | (3u << 16) | (5u << 11) | (40u << 1)
     };
     uint64_t gpr[32] = {0};
-    const unsigned count = (unsigned)(sizeof(code) / sizeof(code[0]));
-    if (result == 0 || count != 4u) return 0;
-
-    for (unsigned i = 0; i < count; ++i) {
-        const uint32_t ins = code[i];
-        const unsigned opcode = ins >> 26;
-        const unsigned rt = (ins >> 21) & 31u;
-        const unsigned ra = (ins >> 16) & 31u;
-        const unsigned rb = (ins >> 11) & 31u;
-        if (opcode == 14u) {
-            const int64_t imm = (int16_t)(ins & 0xffffu);
-            const uint64_t base = (ra == 0u) ? 0u : gpr[ra];
-            gpr[rt] = base + (uint64_t)imm;
-        } else if (opcode == 31u) {
-            const unsigned xo = (ins >> 1) & 0x3ffu;
-            if (xo == 266u) {
-                gpr[rt] = gpr[ra] + gpr[rb];
-            } else if (xo == 40u) {
-                gpr[rt] = gpr[rb] - gpr[ra];
-            } else {
-                return 0;
-            }
-        } else {
-            return 0;
-        }
-    }
+    if (result == 0) return 0;
+    if (ppc_cpu_run(code, sizeof(code) / sizeof(code[0]), gpr) != PPC_CPU_OK)
+        return 0;
     *result = gpr[6];
     return gpr[3] == 7u && gpr[4] == 12u
         && gpr[5] == 19u && *result == 12u;
