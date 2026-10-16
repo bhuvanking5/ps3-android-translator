@@ -15,9 +15,11 @@ typedef enum {
     PPC_CPU_UNSUPPORTED_INSTRUCTION
 } ppc_cpu_status;
 
-/* Runs a bounded, in-memory PowerPC subset, including local relative b.
- * Execution is capped by PPC_CPU_MAX_STEPS to stop infinite loops.
- * This is not a PS3 game runner. */
+/* Runs a bounded in-memory PowerPC subset: arithmetic/logical operations,
+ * local relative b, signed-word cmpwi, and local bc for BO=4 or BO=12.
+ * Conditional branches use the selected CR bit; unsupported BO forms,
+ * absolute/linked branches, and out-of-sequence targets are rejected.
+ * Execution is capped by PPC_CPU_MAX_STEPS. This is not a PS3 game runner. */
 ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
                            uint64_t registers[32]);
 
