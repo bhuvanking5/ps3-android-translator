@@ -78,6 +78,32 @@ int main(void) {
         return 1;
     }
 
+    const uint32_t conditional_taken_program[] = {
+        (14u << 26) | (3u << 21) | 7u,
+        (11u << 26) | (3u << 16) | 7u, /* cmpwi cr0,r3,7 */
+        (16u << 26) | (12u << 21) | (2u << 16) | 8u, /* beq +8 */
+        (14u << 26) | (4u << 21) | 99u,
+        (14u << 26) | (5u << 21) | 1u
+    };
+    if (check_program("cmpwi/conditional branch taken", conditional_taken_program,
+            sizeof(conditional_taken_program) / sizeof(conditional_taken_program[0]),
+            4u, 0u) != 0) {
+        return 1;
+    }
+
+    const uint32_t conditional_not_taken_program[] = {
+        (14u << 26) | (3u << 21) | 7u,
+        (11u << 26) | (3u << 16) | 8u, /* cmpwi cr0,r3,8: EQ=false */
+        (16u << 26) | (12u << 21) | (2u << 16) | 8u,
+        (14u << 26) | (4u << 21) | 99u,
+        (14u << 26) | (5u << 21) | 1u
+    };
+    if (check_program("cmpwi/conditional branch not taken", conditional_not_taken_program,
+            sizeof(conditional_not_taken_program) / sizeof(conditional_not_taken_program[0]),
+            4u, 99u) != 0) {
+        return 1;
+    }
+
     /* Build two values, then test OR, AND, and XOR destination semantics. */
     const uint32_t logical_program[] = {
         (14u << 26) | (3u << 21) | 0x0F0Fu,
