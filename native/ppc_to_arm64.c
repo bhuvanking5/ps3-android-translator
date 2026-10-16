@@ -188,6 +188,23 @@ ppc_to_arm64_status ppc_translate_to_arm64(
             continue;
         }
 
+        if (opcode == 7u) {
+            /* MULLI: signed 16-bit immediate; RA=0 reads PowerPC GPR0. */
+            const int32_t imm = (int16_t)(ins & 0xffffu);
+            if (!emit_gpr_load(output, output_capacity, &used,
+                               SCRATCH_A, ra) ||
+                !emit(output, output_capacity, &used,
+                      imm >= 0 ? movz(SCRATCH_B, (unsigned)imm)
+                               : movn(SCRATCH_B, (unsigned)(-imm - 1))) ||
+                !emit(output, output_capacity, &used,
+                      mul_reg(SCRATCH_A, SCRATCH_A, SCRATCH_B)) ||
+                !emit_gpr_store(output, output_capacity, &used,
+                                SCRATCH_A, rt)) {
+                return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+            }
+            continue;
+        }
+
         if (opcode == 14u) {
             const int32_t imm = (int16_t)(ins & 0xffffu);
             if (ra == 0u) {
