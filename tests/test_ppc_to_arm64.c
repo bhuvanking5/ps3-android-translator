@@ -38,7 +38,7 @@ int main(void) {
     CHECK(ppc_translate_to_arm64(program, 4, 6, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
     CHECK(output_count > 4u * 4u);
-    CHECK(output[0] == (0xD1000000u | (320u << 10) | (31u << 5) | 31u));
+    CHECK(output[0] == (0xD1000000u | (512u << 10) | (31u << 5) | 31u));
     CHECK(output[1] == 0xD2800010u); /* movz x16, #0 for GPR initialization */
     CHECK(output[output_count - 3] ==
           (0xF9400000u | (6u << 10) | (31u << 5))); /* load result into x0 */
@@ -49,7 +49,7 @@ int main(void) {
     const uint32_t negative[] = { addi(3, 0, -2) };
     CHECK(ppc_translate_to_arm64(negative, 1, 3, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
-    CHECK(output[42] == 0x92800030u); /* movn x16, #1 => -2 */
+    CHECK(output[66] == 0x92800030u); /* movn x16, #1 => -2 */
     CHECK(output[output_count - 3] ==
           (0xF9400000u | (3u << 10) | (31u << 5)));
 
@@ -64,14 +64,14 @@ int main(void) {
     };
     CHECK(ppc_translate_to_arm64(forward_branch, 3, 4, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
-    CHECK(output[42] == 0x14000003u); /* B skips the two-word ADDI and lands at the next block */
+    CHECK(output[66] == 0x14000003u); /* B skips the two-word ADDI and lands at the next block */
 
     const uint32_t backward_branch[] = {
         addi(3, 0, 1), addi(4, 0, 2), branch(-4, 0, 0)
     };
     CHECK(ppc_translate_to_arm64(backward_branch, 3, 4, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
-    CHECK(output[46] == 0x17FFFFFEu); /* B from word 38 back to the previous ADDI */
+    CHECK(output[70] == 0x17FFFFFEu); /* B from the relocated branch back to the previous ADDI */
 
     /* cmpwi plus bc emits signed compare, CR bits, and relocatable CBZ/CBNZ. */
     const uint32_t cmpwi = (11u << 26) | (3u << 16) | 7u;
