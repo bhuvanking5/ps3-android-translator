@@ -1,8 +1,8 @@
 """Smoke tests for the optional ps3_native extension.
 
-These tests validate input checking, parity with the Python encoder, and the
-bounded native API. The execution test only supplies a tiny supported
-arithmetic program, never arbitrary ARM64 bytes.
+Tests compare the native C translator with the Python encoder, validate input
+bounds, and exercise the narrow native execution API. Only small supported
+instruction sequences are used.
 """
 import importlib
 import os
@@ -22,10 +22,12 @@ except ImportError:
 
 @unittest.skipIf(ps3_native is None, "optional ps3_native extension is not built yet")
 class NativeBindingTests(unittest.TestCase):
-    # addi r3,r0,7; addi r4,r3,5; add r5,r3,r4; subf r6,r3,r5
     SIMPLE_PPC_PROGRAM = [0x38600007, 0x38830005, 0x7CA32214, 0x7CC32850]
-    FUNCTION_EPILOGUE_R3 = bytes.fromhex("e00303aac0035fd6")
-    FUNCTION_EPILOGUE_R4 = bytes.fromhex("e00304aac0035fd6")
+    FUNCTION_EPILOGUE = {
+        3: bytes.fromhex("e00303aac0035fd6"),
+        4: bytes.fromhex("e00304aac0035fd6"),
+        6: bytes.fromhex("e00306aac0035fd6"),
+    }
 
     def test_rejects_empty_code(self):
         with self.assertRaises(ValueError):
@@ -63,23 +65,37 @@ class NativeBindingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "uint32"):
             ps3_native.translate_and_execute_ppc([0x100000000], 3)
 
-    def test_c_translator_matches_python_encoder_for_addi(self):
-        words = [0x38600007]
+    def assert_encoder_parity(self, words, result_gpr):
         python_bytes = translate_program_to_machine_code(words)
-        native_bytes = ps3_native.translate_ppc_to_arm64(words, 3)
-        self.assertEqual(native_bytes, python_bytes + self.FUNCTION_EPILOGUE_R3)
+        native_bytes = ps3_native.translate_ppc_to_arm64(words, result_gpr)
+        self.assertEqual(
+            native_bytes,
+            python_bytes + self.FUNCTION_EPILOGUE[result_gpr],
+        )
+
+    def test_c_translator_matches_python_encoder_for_addi(self):
+        self.assert_encoder_parity([0x38600007], 3)
 
     def test_c_translator_matches_python_encoder_for_two_addi_instructions(self):
-        words = [0x38600007, 0x38830005]
-        python_bytes = translate_program_to_machine_code(words)
-        native_bytes = ps3_native.translate_ppc_to_arm64(words, 4)
-        self.assertEqual(native_bytes, python_bytes + self.FUNCTION_EPILOGUE_R4)
+        self.assert_encoder_parity([0x38600007, 0x38830005], 4)
 
     def test_c_translator_matches_python_encoder_for_add(self):
-        words = [0x7C642A14]  # add r3, r4, r5
-        python_bytes = translate_program_to_machine_code(words)
-        native_bytes = ps3_native.translate_ppc_to_arm64(words, 3)
-        self.assertEqual(native_bytes, python_bytes + self.FUNCTION_EPILOGUE_R3)
+        self.assert_encoder_parity([0x7C642A14], 3)
+
+    def test_c_translator_matches_python_encoder_for_subf(self):
+        self.assert_encoder_parity([0x7C642850], 3)
+
+    def test_c_translator_matches_python_encoder_for_mulld(self):
+        self.assert_encoder_parity([0x7C6429D2], 3)
+
+    def test_c_translator_matches_python_encoder_for_or(self):
+        self.assert_encoder_parity([0x7C642B78], 4)
+
+    def test_c_translator_matches_python_encoder_for_and(self):
+        self.assert_encoder_parity([0x7C642838], 4)
+
+    def test_c_translator_matches_python_encoder_for_xor(self):
+        self.assert_encoder_parity([0x7C642A78], 4)
 
     def test_translate_and_execute_matches_reference_or_rejects_host(self):
         if platform.machine().lower() not in ("aarch64", "arm64"):
