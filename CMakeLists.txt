@@ -93,3 +93,13 @@ target_include_directories(test_prototype_runtime PRIVATE
 )
 target_compile_options(test_prototype_runtime PRIVATE -Wall -Wextra -Werror)
 add_test(NAME prototype_runtime_integration COMMAND test_prototype_runtime)
+
+add_executable(test_prototype_guest_io
+  tests/test_prototype_guest_io.c
+  android/app/src/main/cpp/prototype_guest_io.c
+)
+target_include_directories(test_prototype_guest_io PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_prototype_guest_io PRIVATE -Wall -Wextra -Werror)
+add_test(NAME prototype_guest_io COMMAND test_prototype_guest_io)
