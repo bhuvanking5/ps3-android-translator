@@ -84,6 +84,13 @@ def encode_instruction(assembly):
 
         raise ValueError("Register-form SUB is not supported yet")
 
+    # ORR register (64-bit).
+    if mnemonic == "orr" and len(operands) == 3:
+        rd = _register(operands[0])
+        rn = _register(operands[1])
+        rm = _register(operands[2])
+        return 0xAA000000 | (rm << 16) | (rn << 5) | rd
+
     # MOV immediate or MOV register.
     if mnemonic == "mov" and len(operands) == 2:
         rd = _register(operands[0])
