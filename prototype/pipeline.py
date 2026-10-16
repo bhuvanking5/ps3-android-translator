@@ -12,7 +12,7 @@ def _require_supported_registers(ins):
         # PowerPC addi treats RA=0 as a literal zero, not as GPR r0.
         if ins["ra"] != 0:
             registers.append(ins["ra"])
-    elif op in ("add", "or", "subf", "mulld"):
+    elif op in ("add", "or", "subf", "mulld", "and", "xor"):
         registers.extend([ins["ra"], ins["rb"]])
 
     if 31 in registers:
@@ -37,7 +37,7 @@ def translate_word(word):
             raise ValueError("PowerPC branch displacement must be 4-byte aligned")
         return [f"    b #{displacement}"]
 
-    if op in ("addi", "add", "or", "subf", "mulld"):
+    if op in ("addi", "add", "or", "subf", "mulld", "and", "xor"):
         _require_supported_registers(ins)
 
     if op == "addi":
@@ -51,34 +51,25 @@ def translate_word(word):
         if base_num == 0:
             if imm >= 0:
                 return [f"    mov {dst}, #{imm}"]
-            return [
-                f"    mov {dst}, #0",
-                f"    sub {dst}, {dst}, #{-imm}",
-            ]
+            return [f"    mov {dst}, #0", f"    sub {dst}, {dst}, #{-imm}"]
 
         base = f"x{base_num}"
-
         if imm > 0:
             return [f"    add {dst}, {base}, #{imm}"]
         if imm < 0:
             return [f"    sub {dst}, {base}, #{-imm}"]
-
         return [f"    mov {dst}, {base}"]
 
-    if op == "or":
+    if op in ("or", "and", "xor"):
         if ins["record"]:
-            raise ValueError("The or record form is not supported yet")
-        return [f'    orr x{ins["ra"]}, x{ins["rt"]}, x{ins["rb"]}']
+            raise ValueError(f"The {op} record form is not supported yet")
+        mnemonic = {"or": "orr", "and": "and", "xor": "eor"}[op]
+        return [f'    {mnemonic} x{ins["ra"]}, x{ins["rt"]}, x{ins["rb"]}']
 
     if op == "add":
         if ins["record"]:
             raise ValueError("The add record form is not supported yet")
-
-        dst = f'x{ins["rt"]}'
-        left = f'x{ins["ra"]}'
-        right = f'x{ins["rb"]}'
-
-        return [f"    add {dst}, {left}, {right}"]
+        return [f'    add x{ins["rt"]}, x{ins["ra"]}, x{ins["rb"]}']
 
     if op == "mulld":
         if ins["record"]:
@@ -97,7 +88,6 @@ def translate_bytes(data):
     """Translate exactly four big-endian instruction bytes."""
     if not isinstance(data, (bytes, bytearray)) or len(data) != 4:
         raise ValueError("Instruction data must contain exactly 4 bytes")
-
     return translate_word(int.from_bytes(data, "big"))
 
 
@@ -112,20 +102,13 @@ def translate_program(instructions, start_address=0):
         or start_address < 0
         or start_address % 4 != 0
     ):
-        raise ValueError(
-            "Start address must be non-negative and 4-byte aligned"
-        )
+        raise ValueError("Start address must be non-negative and 4-byte aligned")
 
     output = []
-
     for index, word in enumerate(instructions):
         address = start_address + index * 4
-
         try:
             output.extend(translate_word(word))
         except ValueError as exc:
-            raise ValueError(
-                f"Translation failed at 0x{address:08X}: {exc}"
-            ) from exc
-
+            raise ValueError(f"Translation failed at 0x{address:08X}: {exc}") from exc
     return output
