@@ -33,6 +33,12 @@ class CPUState:
             ) & MASK64
             self.pc = old_pc + 4
 
+        elif op == "or":
+            self.gpr[ins["ra"]] = (
+                self.gpr[ins["rt"]] | self.gpr[ins["rb"]]
+            ) & MASK64
+            self.pc = old_pc + 4
+
         elif op == "b":
             if ins["link"]:
                 self.lr = old_pc + 4
