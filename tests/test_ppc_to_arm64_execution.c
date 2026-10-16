@@ -121,6 +121,16 @@ int main(void) {
         return 1;
     }
 
+    const uint32_t mulli_program[] = {
+        (14u << 26) | (3u << 21) | 12u,
+        (7u << 26) | (4u << 21) | (3u << 16) | 5u, /* mulli r4,r3,5 */
+        (7u << 26) | (5u << 21) | (4u << 16) | ((uint32_t)-3 & 0xffffu)
+    };
+    if (check_program("MULLI positive/negative immediate", mulli_program,
+            sizeof(mulli_program) / sizeof(mulli_program[0]), 5u, UINT64_MAX - 179u) != 0) {
+        return 1;
+    }
+
     const uint32_t logical_immediate_program[] = {
         (14u << 26) | (3u << 21) | 0x0F0Fu,
         (24u << 26) | (3u << 21) | (4u << 16) | 0x00F0u, /* ori r4,r3,0x00f0 */
