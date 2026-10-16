@@ -31,6 +31,18 @@ jobs:
       - name: Run Python tests
         run: python -m unittest discover -s tests -v
 
+  arm64-native-execution:
+    name: Real ARM64 generated-code execution
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure native tests
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build native tests
+        run: cmake --build build --parallel 2
+      - name: Execute ARM64 and translated PowerPC tests
+        run: ctest --test-dir build --output-on-failure
+
   android-build:
     name: Android ARM64 bridge build
     runs-on: ubuntu-latest
