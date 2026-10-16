@@ -61,6 +61,10 @@ ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
             const int64_t imm = (int16_t)(ins & 0xffffu);
             const uint64_t base = (ra == 0u) ? 0u : registers[ra];
             registers[rt] = base + (uint64_t)imm;
+        } else if (opcode == 24u) { /* ORI: zero-extended immediate */
+            registers[ra] = registers[rt] | (uint64_t)(ins & 0xffffu);
+        } else if (opcode == 26u) { /* XORI: zero-extended immediate */
+            registers[ra] = registers[rt] ^ (uint64_t)(ins & 0xffffu);
         } else if (opcode == 31u) {
             const unsigned xo = (ins >> 1) & 0x3ffu;
             if (xo == 266u) { /* ADD */
