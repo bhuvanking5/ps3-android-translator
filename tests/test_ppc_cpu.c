@@ -33,6 +33,14 @@ int main(void) {
     CHECK(gpr[5] == (42u | 6u));
 
     memset(gpr, 0, sizeof(gpr));
+    const uint32_t logical[] = {
+        addi(3, 0, 12), addi(4, 0, 10),
+        xo(5, 3, 4, 28), xo(6, 3, 4, 316), xo(7, 3, 4, 444)
+    };
+    CHECK(ppc_cpu_run(logical, 5, gpr) == PPC_CPU_OK);
+    CHECK(gpr[5] == 8u && gpr[6] == 6u && gpr[7] == 14u);
+
+    memset(gpr, 0, sizeof(gpr));
     const uint32_t negative[] = { addi(3, 0, -2) };
     CHECK(ppc_cpu_run(negative, 1, gpr) == PPC_CPU_OK);
     CHECK(gpr[3] == UINT64_MAX - 1u);
@@ -44,6 +52,6 @@ int main(void) {
     CHECK(ppc_cpu_run(NULL, 1, gpr) == PPC_CPU_INVALID_ARGUMENT);
     CHECK(ppc_cpu_run(program, 1, NULL) == PPC_CPU_INVALID_ARGUMENT);
 
-    puts("PowerPC subset tests passed (ADDI/ADD/SUBF, negative immediate, bounds, unsupported opcode).");
+    puts("PowerPC subset tests passed (ADDI/ADD/SUBF/MULLD/AND/OR/XOR, negative immediate, bounds, unsupported opcode).");
     return 0;
 }
