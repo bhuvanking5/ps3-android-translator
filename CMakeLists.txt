@@ -85,6 +85,7 @@ add_test(NAME native_controller_input COMMAND test_controller_input)
 add_executable(test_prototype_runtime
   tests/test_prototype_runtime.c
   android/app/src/main/cpp/prototype_runtime.c
+  android/app/src/main/cpp/prototype_guest_io.c
   android/app/src/main/cpp/controller_input.c
   android/app/src/main/cpp/ppc_cpu.c
 )
