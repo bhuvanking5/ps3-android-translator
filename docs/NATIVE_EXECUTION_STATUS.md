@@ -3,14 +3,14 @@
 ## Implemented
 
 - The C native runtime validates arguments and uses write-then-execute memory permissions on AArch64.
-- A bounded C PowerPC-to-ARM64 translator emits a restricted subset: ADDI, ADD, SUBF, MULLD, OR, AND, XOR, `ori`, `xori`, signed-word `cmpwi`, local relative unconditional `b`, and `bc` with BO=4/12 using one CR bit. Local branches are relocated after emitted instruction offsets are known.
+- A bounded C PowerPC-to-ARM64 translator emits a restricted subset: ADDI, `mulli`, ADD, SUBF, MULLD, OR, AND, XOR, `ori`, `xori`, signed-word `cmpwi`, local relative unconditional `b`, and `bc` with BO=4/12 using one CR bit. Local branches are relocated after emitted instruction offsets are known.
 - The reference interpreter supports signed-word `cmpwi` and a restricted local relative `bc` subset (`BO=4` or `BO=12`) using the selected condition-register bit. It also follows local relative unconditional `b` and has a hard step limit to stop infinite loops.
 - The ARM64 translator stores the eight CR fields as individual bits in its stack frame and translates only the restricted `cmpwi`/`bc` behavior described above. Other conditional BO forms, `cmpdi`, linked branches, absolute branches, and out-of-sequence branch targets remain unsupported.
 - The translator stores all 32 PowerPC GPRs and the modeled CR bits in a 512-byte stack frame and uses x16/x17 as temporary registers; generated code restores SP before returning.
 - The Android JNI smoke-test path runs a fixed, built-in PowerPC arithmetic program through both the reference interpreter and the C translator, executes the generated ARM64 words, and compares the result.
 - The optional CPython extension now exposes `translate_and_execute_ppc(instruction_words, result_gpr)`. It accepts a sequence of 32-bit PowerPC words, enforces the instruction/register limits, translates only supported instructions, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
 - `prototype/native_execution.py` provides a Python wrapper around that API.
-- Tests cover emitted words, ORI/XORI execution comparisons, unsupported instructions, invalid arguments, and the expected unsupported-architecture response on x86-64.
+- Tests cover emitted words, MULLI and ORI/XORI execution comparisons, unsupported instructions, invalid arguments, and the expected unsupported-architecture response on x86-64.
 - CI includes a native ARM64 job intended to execute the translated program and compare its result with the PowerPC reference interpreter.
 
 ## Not yet verified
