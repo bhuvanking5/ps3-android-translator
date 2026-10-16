@@ -72,6 +72,10 @@ ppc_to_arm64_status ppc_translate_to_arm64(
     if (count > PPC_MAX_INSTRUCTIONS) return PPC_TO_ARM64_INSTRUCTION_LIMIT;
 
     size_t used = 0;
+    size_t instruction_output_offsets[PPC_MAX_INSTRUCTIONS] = {0};
+    size_t branch_word_positions[PPC_MAX_INSTRUCTIONS] = {0};
+    size_t branch_target_indices[PPC_MAX_INSTRUCTIONS] = {0};
+    unsigned char is_branch[PPC_MAX_INSTRUCTIONS] = {0};
     /* Reserve a 16-byte-aligned frame containing all 32 64-bit PPC GPRs. */
     if (!emit(output, output_capacity, &used,
               0xD1000000u | (PPC_FRAME_BYTES << 10) | (31u << 5) | 31u)) {
@@ -89,11 +93,33 @@ ppc_to_arm64_status ppc_translate_to_arm64(
     }
 
     for (size_t i = 0; i < count; ++i) {
+        instruction_output_offsets[i] = used;
         const uint32_t ins = instructions[i];
         const unsigned opcode = ins >> 26;
         const unsigned rt = (ins >> 21) & 31u;
         const unsigned ra = (ins >> 16) & 31u;
         const unsigned rb = (ins >> 11) & 31u;
+
+        if (opcode == 18u) {
+            /* Only local relative b is supported: no AA or LK. */
+            if ((ins & 3u) != 0u) return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+            int32_t displacement = (int32_t)(ins & 0x03FFFFFCu);
+            if ((displacement & 0x02000000) != 0) {
+                displacement |= (int32_t)0xFC000000u;
+            }
+            if ((displacement & 3) != 0) return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+            const int64_t target_index = (int64_t)i + displacement / 4;
+            if (target_index < 0 || target_index >= (int64_t)count) {
+                return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+            }
+            branch_word_positions[i] = used;
+            branch_target_indices[i] = (size_t)target_index;
+            is_branch[i] = 1u;
+            if (!emit(output, output_capacity, &used, 0x14000000u)) {
+                return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+            }
+            continue;
+        }
 
         if (opcode == 14u) {
             const int32_t imm = (int16_t)(ins & 0xffffu);
@@ -192,6 +218,20 @@ ppc_to_arm64_status ppc_translate_to_arm64(
         }
 
         return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+    }
+
+    /* Resolve local ARM64 B immediates after every target offset is known. */
+    for (size_t i = 0; i < count; ++i) {
+        if (is_branch[i]) {
+            const int64_t delta_words =
+                (int64_t)instruction_output_offsets[branch_target_indices[i]] -
+                (int64_t)branch_word_positions[i];
+            if (delta_words < -(1LL << 25) || delta_words >= (1LL << 25)) {
+                return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+            }
+            output[branch_word_positions[i]] =
+                0x14000000u | ((uint32_t)delta_words & 0x03FFFFFFu);
+        }
     }
 
     if (!emit(output, output_capacity, &used, load_gpr(0u, result_gpr)) ||
