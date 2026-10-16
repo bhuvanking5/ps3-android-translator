@@ -38,6 +38,8 @@ def encode_instruction(assembly):
         raise ValueError("Assembly instruction must be a string")
 
     parts = assembly.strip().lower().split(None, 1)
+    if parts == ["ret"]:
+        return 0xD65F03C0
     if len(parts) != 2:
         raise ValueError("Invalid assembly instruction")
 
