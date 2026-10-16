@@ -38,7 +38,7 @@ int main(void) {
 
     CHECK(ps3_prototype_run_slice(mapped_load, 2u,
         registers, &report) == PPC_CPU_OK);
-    CHECK(registers[3] == 0xffff0000u);
+    CHECK((uint32_t)registers[3] == 0xffff0000u);
     CHECK(registers[4] == (PS3_INPUT_CROSS | PS3_INPUT_L1));
 
     CHECK(ps3_prototype_run_slice(unmapped_load, 3u,
