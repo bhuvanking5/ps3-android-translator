@@ -31,6 +31,15 @@ class DecoderTests(unittest.TestCase):
         self.assertEqual(result["rb"], 5)
         self.assertFalse(result["record"])
 
+    def test_decode_cmpwi(self):
+        word = (11 << 26) | (2 << 23) | (5 << 16) | 0xFFFC
+        result = decode_word(word)
+        self.assertEqual(result["mnemonic"], "cmpwi")
+        self.assertEqual(result["bf"], 2)
+        self.assertEqual(result["ra"], 5)
+        self.assertEqual(result["immediate"], -4)
+        self.assertFalse(result["is_64bit"])
+
     def test_decode_conditional_branch_fields(self):
         # bc BO=12, BI=3, BD=+16, AA=0, LK=0
         word = (16 << 26) | (12 << 21) | (3 << 16) | (16 & 0xFFFC)
