@@ -6,11 +6,14 @@ Experimental research project exploring translation of a **small subset of Power
 
 ## What exists today
 
-- A small PowerPC instruction decoder and reference interpreter.
+- A small PowerPC instruction decoder and reference interpreter, including bounded execution directly from guest-memory buffers for a tiny instruction subset.
+- A defensive PS3-style ELF64/PowerPC64 metadata inspector and bounded PT_LOAD segment mapper; this is not a complete SELF/ELF game loader.
 - Experimental ARM64 instruction encoding for a limited instruction subset.
 - A basic block translator with limited local relative branch support.
 - A C native runtime API and CMake build that produces a shared library.
 - Python unit tests and a native-runtime smoke test run by GitHub Actions.
+
+The ELF-to-CPU test uses a synthetic ELF with two simple `addi` instructions. It validates this narrow prototype path only; it does not demonstrate compatibility with a real PS3 executable.
 
 ## Important limitations
 
