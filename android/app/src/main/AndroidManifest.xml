@@ -12,6 +12,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".TwoDTestActivity" android:exported="false" />
-        <activity android:name=".ThreeDTestActivity" android:exported="false" />\n        <activity android:name=".GraphicsTranslationTestActivity" android:exported="false" />
+        <activity android:name=".ThreeDTestActivity" android:exported="false" />
+        <activity android:name=".GraphicsTranslationTestActivity" android:exported="false" />
     </application>
 </manifest>
