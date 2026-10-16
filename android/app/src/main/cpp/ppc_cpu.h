@@ -15,7 +15,7 @@ typedef enum {
     PPC_CPU_UNSUPPORTED_INSTRUCTION
 } ppc_cpu_status;
 
-/* Runs a bounded in-memory PowerPC subset: arithmetic/logical operations,
+/* Runs a bounded in-memory PowerPC subset: arithmetic/logical operations including signed-immediate `mulli`,
  * local relative b, signed-word cmpwi, and local bc for BO=4 or BO=12.
  * Conditional branches use the selected CR bit; unsupported BO forms,
  * absolute/linked branches, and out-of-sequence targets are rejected.
