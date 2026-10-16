@@ -20,6 +20,19 @@ def decode_word(word):
             immediate -= 0x10000
         return {"mnemonic": "addi", "rt": rt, "ra": ra, "immediate": immediate}
 
+    # Compare immediate signed word: cmpwi — opcode 11.
+    if opcode == 11:
+        immediate = word & 0xFFFF
+        if immediate & 0x8000:
+            immediate -= 0x10000
+        return {
+            "mnemonic": "cmpwi",
+            "bf": (word >> 23) & 0x7,
+            "ra": (word >> 16) & 0x1F,
+            "immediate": immediate,
+            "is_64bit": bool((word >> 21) & 1),
+        }
+
     # Conditional branch: bc / bca / bcl / bcla — opcode 16.
     if opcode == 16:
         bd = (word >> 2) & 0x3FFF
