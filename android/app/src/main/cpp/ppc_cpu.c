@@ -27,6 +27,10 @@ ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
                 registers[rt] = registers[ra] * registers[rb];
             } else if (xo == 444u) { /* OR: RS field aliases RT in this decoder */
                 registers[ra] = registers[rt] | registers[rb];
+            } else if (xo == 28u) { /* AND */
+                registers[ra] = registers[rt] & registers[rb];
+            } else if (xo == 316u) { /* XOR */
+                registers[ra] = registers[rt] ^ registers[rb];
             } else {
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             }
