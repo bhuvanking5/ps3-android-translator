@@ -24,7 +24,9 @@ typedef struct {
     float left_x, left_y, right_x, right_y;
 } ps3_controller_input;
 
-/* Generic emulator input report: axis 0=negative, 128=center, 255=positive.
+/* Single publisher is expected (the Java state methods serialize updates).
+ * Readers retry while a publication is in progress, preserving one coherent
+ * button-and-axis snapshot. Generic report axis 0=negative, 128=center, 255=positive.
  * This is an adapter contract, not a claim of exact hardware protocol parity. */
 typedef struct {
     uint32_t buttons;
