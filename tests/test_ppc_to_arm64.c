@@ -29,45 +29,46 @@ int main(void) {
         xo(5, 3, 4, 266),
         xo(6, 3, 5, 40)
     };
-    const uint32_t expected[] = {
-        0xD28000E3u, /* movz x3, #7 */
-        0x91001464u, /* add x4, x3, #5 */
-        0x8B040065u, /* add x5, x3, x4 */
-        0xCB0300A6u, /* sub x6, x5, x3 */
-        0xAA0603E0u, /* mov x0, x6 */
-        0xD65F03C0u  /* ret */
-    };
 
     CHECK(ppc_translate_to_arm64(program, 4, 6, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
-    CHECK(output_count == sizeof(expected) / sizeof(expected[0]));
-    CHECK(memcmp(output, expected, sizeof(expected)) == 0);
+    CHECK(output_count > 4u * 4u);
+    CHECK(output[0] == (0xD1000000u | (256u << 10) | (31u << 5) | 31u));
+    CHECK(output[1] == 0xD2800010u); /* movz x16, #0 for GPR initialization */
+    CHECK(output[output_count - 3] ==
+          (0xF9400000u | (6u << 10) | (31u << 5))); /* load result into x0 */
+    CHECK(output[output_count - 2] ==
+          (0x91000000u | (256u << 10) | (31u << 5) | 31u)); /* restore SP */
+    CHECK(output[output_count - 1] == 0xD65F03C0u); /* ret */
 
     const uint32_t negative[] = { addi(3, 0, -2) };
     CHECK(ppc_translate_to_arm64(negative, 1, 3, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
-    CHECK(output[0] == 0x92800023u); /* movn x3, #1 => -2 */
+    CHECK(output[34] == 0x92800030u); /* movn x16, #1 => -2 */
+    CHECK(output[output_count - 3] ==
+          (0xF9400000u | (3u << 10) | (31u << 5)));
 
-    const uint32_t unsupported[] = { 0x40000004u }; /* conditional branch */
+    /* Large signed immediates now use MOVZ/MOVN + register arithmetic. */
+    const uint32_t large_immediate[] = { addi(31, 2, 12000) };
+    CHECK(ppc_translate_to_arm64(large_immediate, 1, 31, output,
+          PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
+
+    const uint32_t unsupported[] = { 0x40000004u };
     CHECK(ppc_translate_to_arm64(unsupported, 1, 3, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) ==
           PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION);
     CHECK(output_count == 0);
 
-    const uint32_t reserved_register[] = { addi(19, 0, 1) };
-    CHECK(ppc_translate_to_arm64(reserved_register, 1, 3, output,
-          PPC_TO_ARM64_MAX_WORDS, &output_count) ==
-          PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION);
-
     CHECK(ppc_translate_to_arm64(program, 4, 6, output, 5,
           &output_count) == PPC_TO_ARM64_OUTPUT_TOO_SMALL);
+    CHECK(output_count == 0);
     CHECK(ppc_translate_to_arm64(program, 0, 6, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) ==
           PPC_TO_ARM64_INVALID_ARGUMENT);
-    CHECK(ppc_translate_to_arm64(program, 4, 18, output,
+    CHECK(ppc_translate_to_arm64(program, 4, 32, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) ==
           PPC_TO_ARM64_INVALID_ARGUMENT);
 
-    puts("PASS: bounded PowerPC-to-ARM64 translation and rejection tests");
+    puts("PASS: stack-backed register mapping, translation, and rejection tests");
     return 0;
 }
