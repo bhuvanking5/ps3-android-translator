@@ -22,6 +22,7 @@ public final class VirtualControllerActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        ControllerInputState.releaseAll();
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(16, 20, 16, 20);
@@ -110,8 +111,12 @@ public final class VirtualControllerActivity extends Activity {
         caption.setTextColor(Color.WHITE);
         caption.setGravity(Gravity.CENTER);
         column.addView(caption);
-        AnalogStickView stick = new AnalogStickView(this, (x, y) ->
-            status.setText(label + String.format(java.util.Locale.ROOT, ": X %.2f, Y %.2f", x, y)));
+        boolean left = label.startsWith("Left");
+        AnalogStickView stick = new AnalogStickView(this, (x, y) -> {
+            if (left) ControllerInputState.setLeftAxes(x, y);
+            else ControllerInputState.setRightAxes(x, y);
+            status.setText(ControllerInputState.snapshot());
+        });
         column.addView(stick, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 170));
         parent.addView(column, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
     }
@@ -166,13 +171,15 @@ public final class VirtualControllerActivity extends Activity {
         parent.addView(button, params);
         button.setOnTouchListener((View view, MotionEvent event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
-                status.setText("Input: " + inputName + " pressed");
+                ControllerInputState.setButton(inputName, true);
+                status.setText(ControllerInputState.snapshot());
                 view.setAlpha(0.65f);
                 return true;
             }
             if (event.getAction() == MotionEvent.ACTION_UP
                     || event.getAction() == MotionEvent.ACTION_CANCEL) {
-                status.setText("Input: idle");
+                ControllerInputState.setButton(inputName, false);
+                status.setText(ControllerInputState.snapshot());
                 view.setAlpha(1.0f);
                 return true;
             }
