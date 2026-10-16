@@ -79,6 +79,28 @@ class TranslationProgramTests(unittest.TestCase):
             [0xD28000E0, 0xD2800261, 0xCB000020],
         )
 
+    def test_reference_result_matches_native_smoke_program(self):
+        # Differential checkpoint: execute the same tiny guest program in
+        # the reference CPU and verify its translated ARM64 result setup.
+        # This does not execute generated ARM64 bytes on the host.
+        guest_program = [
+            ppc_addi(0, 0, 7),
+            ppc_addi(1, 0, 19),
+            ppc_subf(0, 0, 1),
+        ]
+        cpu = CPUState()
+        for instruction in guest_program:
+            cpu.execute(instruction)
+        self.assertEqual(cpu.gpr[0], 12)
+
+        translated = translate_program(guest_program, start_address=0x1000)
+        machine_code = encode_program(translated)
+        words = [
+            int.from_bytes(machine_code[i:i + 4], "little")
+            for i in range(0, len(machine_code), 4)
+        ]
+        self.assertEqual(words, [0xD28000E0, 0xD2800261, 0xCB000020])
+
     def test_big_endian_guest_bytes_flow_through_encoder(self):
         # PowerPC addi r0, r0, 7 as big-endian guest instruction bytes.
         guest_bytes = ppc_addi(0, 0, 7).to_bytes(4, "big")
