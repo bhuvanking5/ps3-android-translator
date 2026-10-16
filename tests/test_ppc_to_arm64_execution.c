@@ -121,6 +121,17 @@ int main(void) {
         return 1;
     }
 
+    const uint32_t logical_immediate_program[] = {
+        (14u << 26) | (3u << 21) | 0x0F0Fu,
+        (24u << 26) | (3u << 21) | (4u << 16) | 0x00F0u, /* ori r4,r3,0x00f0 */
+        (26u << 26) | (4u << 21) | (5u << 16) | 0x0F00u /* xori r5,r4,0x0f00 */
+    };
+    if (check_program("ORI/XORI immediate", logical_immediate_program,
+            sizeof(logical_immediate_program) / sizeof(logical_immediate_program[0]),
+            5u, (0x0F0Fu | 0x00F0u) ^ 0x0F00u) != 0) {
+        return 1;
+    }
+
     const uint32_t spilled_register_program[] = {
         (14u << 26) | (31u << 21) | 12000u, /* addi r31,r0,12000 */
         (14u << 26) | (30u << 21) | (31u << 16) | ((uint32_t)-5000 & 0xffffu),
