@@ -57,6 +57,9 @@ ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
             const int32_t rhs = (int16_t)(ins & 0xffffu);
             if (((ins >> 21) & 1u) != 0u) return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             condition[bf] = lhs < rhs ? 8u : lhs > rhs ? 4u : 2u;
+        } else if (opcode == 7u) { /* MULLI: signed 16-bit immediate */
+            const int64_t imm = (int16_t)(ins & 0xffffu);
+            registers[rt] = registers[ra] * (uint64_t)imm;
         } else if (opcode == 14u) { /* ADDI: sign-extended 16-bit immediate */
             const int64_t imm = (int16_t)(ins & 0xffffu);
             const uint64_t base = (ra == 0u) ? 0u : registers[ra];
