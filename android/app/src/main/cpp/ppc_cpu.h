@@ -5,15 +5,19 @@
 #include <stdint.h>
 
 #define PPC_CPU_MAX_INSTRUCTIONS 256u
+#define PPC_CPU_MAX_STEPS 4096u
 
 typedef enum {
     PPC_CPU_OK = 0,
     PPC_CPU_INVALID_ARGUMENT,
     PPC_CPU_INSTRUCTION_LIMIT,
+    PPC_CPU_STEP_LIMIT,
     PPC_CPU_UNSUPPORTED_INSTRUCTION
 } ppc_cpu_status;
 
-/* Runs a bounded, in-memory PowerPC subset. This is not a PS3 game runner. */
+/* Runs a bounded, in-memory PowerPC subset, including local relative b.
+ * Execution is capped by PPC_CPU_MAX_STEPS to stop infinite loops.
+ * This is not a PS3 game runner. */
 ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
                            uint64_t registers[32]);
 
