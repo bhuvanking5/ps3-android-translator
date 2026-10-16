@@ -37,13 +37,14 @@ class TranslationProgramTests(unittest.TestCase):
             "mov x0, #7",
             "mov x1, #19",
             "sub x0, x1, x0",
+            "ret",
         ]
         machine_code = encode_program(native_sequence)
         words = [
             int.from_bytes(machine_code[i:i + 4], "little")
             for i in range(0, len(machine_code), 4)
         ]
-        self.assertEqual(words, [0xD28000E0, 0xD2800261, 0xCB000020])
+        self.assertEqual(words, [0xD28000E0, 0xD2800261, 0xCB000020, 0xD65F03C0])
 
     def test_guest_program_generates_fixed_native_smoke_bytes(self):
         # This proves the translator pipeline emits the exact bytes used by
