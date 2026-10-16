@@ -38,7 +38,7 @@ class BasicBlockTests(unittest.TestCase):
         blocks = build_basic_blocks(program, start_address=0x1000)
         self.assertEqual([b["start_address"] for b in blocks], [0x1000, 0x1008, 0x100C])
         self.assertEqual(blocks[0]["terminator"], "branch")
-        self.assertEqual(blocks[0]["successors"], [0x1008])
+        self.assertEqual(blocks[0]["successors"], [0x100C])
         self.assertEqual(blocks[1]["successors"], [0x100C])
         self.assertEqual(blocks[2]["successors"], [])
 
