@@ -85,6 +85,17 @@ public final class MainActivity extends Activity {
         demo3dNote.setPadding(0, 8, 0, 8);
         layout.addView(demo3dNote);
 
+        Button graphics = new Button(this);
+        graphics.setText("Run graphics translation scaffold");
+        graphics.setOnClickListener(v ->
+            startActivity(new Intent(this, GraphicsTranslationTestActivity.class)));
+        layout.addView(graphics);
+        TextView graphicsNote = text(
+            "Experimental internal CLEAR/DRAW command mapping to OpenGL ES 2.0. This is the first graphics-pipeline scaffold, not a PS3 RSX decoder.",
+            13, Color.rgb(255, 205, 130));
+        graphicsNote.setPadding(0, 8, 0, 8);
+        layout.addView(graphicsNote);
+
         heading("Performance settings");
         TextView preset = text("Default preset: Low-end device (conservative settings)", 14, Color.rgb(130, 230, 160));
         layout.addView(preset);
