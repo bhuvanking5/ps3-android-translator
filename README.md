@@ -9,7 +9,7 @@ Experimental research project exploring translation of a **small subset of Power
 - A small PowerPC instruction decoder and reference interpreter, including logical operations and bounded execution for a tiny instruction subset.
 - A defensive PS3-style ELF64/PowerPC64 metadata inspector and bounded PT_LOAD segment mapper; this is not a complete SELF/ELF game loader.
 - Experimental Python instruction encoding and translation tools for a limited instruction subset.
-- A bounded C PowerPC-to-ARM64 translator for ADDI, ADD, SUBF, MULLD, OR, AND, and XOR. It rejects unsupported instructions and restricts the register mapping to caller-saved ARM64 registers.
+- A bounded C PowerPC-to-ARM64 translator for ADDI, ADD, SUBF, MULLD, OR, AND, and XOR. It stores all 32 PowerPC GPRs in a stack-backed frame and uses ARM64 scratch registers for loads, operations, and stores.
 - An optional CPython extension API, `ps3_native.translate_and_execute_ppc(words, result_gpr)`, that accepts PowerPC instruction words, validates and translates the supported subset, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
 - A Python wrapper at `prototype/native_execution.py` for calling that optional native API.
 - An Android JNI smoke-test path that translates a fixed built-in PowerPC arithmetic program, executes the generated ARM64 words, and compares the result against the reference interpreter. It never accepts executable bytes from a selected game file.
@@ -23,7 +23,7 @@ The ELF-to-CPU test uses a synthetic ELF with simple instructions. It validates 
 - The new native API is a **small arithmetic proof of concept**, not a complete connection from every Python translator output or the integrated engine. The integrated engine continues to report `native_execution: false`.
 - The supported PowerPC instruction set is tiny and does not represent a complete PPU implementation. The current native execution API accepts only 1–256 32-bit instruction words and only the explicitly supported straight-line subset.
 - Generated ARM64 execution requires an AArch64 process. On x86-64 hosts, tests verify translation, rejection behavior, and the unsupported-architecture response.
-- Register spill/load support, full PowerPC condition-register behavior, broad branch handling, SPU emulation, PS3 memory/OS services, and RSX graphics are not implemented.
+- Full PowerPC condition-register behavior, broad branch handling, SPU emulation, PS3 memory/OS services, and RSX graphics are not implemented. Stack-backed GPR storage is implemented only for the supported straight-line instruction subset.
 - No PS3 title has booted in this project. The graphics demo activities are standalone prototypes, not PS3 rendering.
 
 ## Build and test
@@ -56,7 +56,7 @@ The CI workflow runs host tests, attempts the translated-code execution test on 
 1. Confirm the new Python native API tests and Android build pass in CI.
 2. Run the bounded translated-code test on an AArch64 CI runner and on an actual ARM64 Android device.
 3. Connect the Python translator's instruction semantics to the native translator with shared differential tests.
-4. Add correct register spill/load support, condition-register behavior, and broader instruction coverage.
+4. Verify stack-backed GPR spill/load on ARM64, then add condition-register behavior and broader instruction coverage.
 5. Build out the much larger PPU/SPU, memory, OS, and graphics requirements needed by a real emulator.
 
 See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md).
