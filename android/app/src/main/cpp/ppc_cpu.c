@@ -23,6 +23,10 @@ ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
                 registers[rt] = registers[ra] + registers[rb];
             } else if (xo == 40u) { /* SUBF */
                 registers[rt] = registers[rb] - registers[ra];
+            } else if (xo == 233u) { /* MULLD, record form is a distinct XO */
+                registers[rt] = registers[ra] * registers[rb];
+            } else if (xo == 444u) { /* OR: RS field aliases RT in this decoder */
+                registers[ra] = registers[rt] | registers[rb];
             } else {
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             }
