@@ -2,7 +2,7 @@
 
 #define PPC_MAX_INSTRUCTIONS 256u
 #define PPC_GPR_COUNT 32u
-#define PPC_FRAME_BYTES 256u
+#define PPC_FRAME_BYTES 320u
 #define SCRATCH_A 16u
 #define SCRATCH_B 17u
 
@@ -76,7 +76,7 @@ ppc_to_arm64_status ppc_translate_to_arm64(
     size_t branch_word_positions[PPC_MAX_INSTRUCTIONS] = {0};
     size_t branch_target_indices[PPC_MAX_INSTRUCTIONS] = {0};
     unsigned char is_branch[PPC_MAX_INSTRUCTIONS] = {0};
-    /* Reserve a 16-byte-aligned frame containing all 32 64-bit PPC GPRs. */
+    /* Frame stores 32 GPRs plus 32 individual CR bits in 64-bit slots. */
     if (!emit(output, output_capacity, &used,
               0xD1000000u | (PPC_FRAME_BYTES << 10) | (31u << 5) | 31u)) {
         return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
@@ -86,7 +86,7 @@ ppc_to_arm64_status ppc_translate_to_arm64(
     if (!emit(output, output_capacity, &used, movz(SCRATCH_A, 0u))) {
         return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
     }
-    for (unsigned reg = 0; reg < PPC_GPR_COUNT; ++reg) {
+    for (unsigned reg = 0; reg < 40u; ++reg) {
         if (!emit(output, output_capacity, &used, store_gpr(SCRATCH_A, reg))) {
             return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
         }
@@ -99,6 +99,73 @@ ppc_to_arm64_status ppc_translate_to_arm64(
         const unsigned rt = (ins >> 21) & 31u;
         const unsigned ra = (ins >> 16) & 31u;
         const unsigned rb = (ins >> 11) & 31u;
+
+        if (opcode == 16u) {
+            /* bc subset: local relative branch on one CR bit (BO=4/12). */
+            const unsigned bo = (ins >> 21) & 31u;
+            const unsigned bi = (ins >> 16) & 31u;
+            if ((ins & 3u) != 0u || (bo != 4u && bo != 12u)) {
+                return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+            }
+            int32_t displacement = (int32_t)(ins & 0x0000FFFCu);
+            if ((displacement & 0x00008000) != 0) {
+                displacement |= (int32_t)0xFFFF0000u;
+            }
+            const int64_t target_index = (int64_t)i + displacement / 4;
+            if (target_index < 0 || target_index >= (int64_t)count) {
+                return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+            }
+            if (!emit_gpr_load(output, output_capacity, &used,
+                               SCRATCH_A, 32u + bi)) {
+                return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+            }
+            branch_word_positions[i] = used;
+            branch_target_indices[i] = (size_t)target_index;
+            is_branch[i] = (bo == 12u) ? 2u : 3u;
+            if (!emit(output, output_capacity, &used,
+                      (bo == 12u ? 0xB5000000u : 0xB4000000u) | SCRATCH_A)) {
+                return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+            }
+            continue;
+        }
+
+        if (opcode == 11u) {
+            /* cmpwi: compare signed low 32 bits; L=1 (cmpdi) is unsupported. */
+            const unsigned bf = (ins >> 23) & 7u;
+            const unsigned cmp_ra = (ins >> 16) & 31u;
+            const int32_t imm = (int16_t)(ins & 0xffffu);
+            if (((ins >> 21) & 1u) != 0u) {
+                return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+            }
+            if (!emit_gpr_load(output, output_capacity, &used,
+                               SCRATCH_A, cmp_ra) ||
+                !emit(output, output_capacity, &used,
+                      imm >= 0 ? movz(SCRATCH_B, (unsigned)imm)
+                               : movn(SCRATCH_B, (unsigned)(-imm - 1))) ||
+                !emit(output, output_capacity, &used,
+                      0x6B00001Fu | (SCRATCH_B << 16) |
+                      (SCRATCH_A << 5))) {
+                return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+            }
+            const unsigned cr_base = 32u + 4u * bf;
+            const unsigned conds[3] = {11u, 12u, 0u}; /* LT, GT, EQ */
+            for (unsigned bit = 0; bit < 3u; ++bit) {
+                const uint32_t cset =
+                    0x1A9F07E0u | ((conds[bit] ^ 1u) << 12) | SCRATCH_B;
+                if (!emit(output, output_capacity, &used, cset) ||
+                    !emit_gpr_store(output, output_capacity, &used,
+                                    SCRATCH_B, cr_base + bit)) {
+                    return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+                }
+            }
+            /* SO is not modelled by this subset, so write it as zero. */
+            if (!emit(output, output_capacity, &used, movz(SCRATCH_B, 0u)) ||
+                !emit_gpr_store(output, output_capacity, &used,
+                                SCRATCH_B, cr_base + 3u)) {
+                return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+            }
+            continue;
+        }
 
         if (opcode == 18u) {
             /* Only local relative b is supported: no AA or LK. */
@@ -220,17 +287,26 @@ ppc_to_arm64_status ppc_translate_to_arm64(
         return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
     }
 
-    /* Resolve local ARM64 B immediates after every target offset is known. */
+    /* Resolve local B and CBZ/CBNZ offsets after all target offsets are known. */
     for (size_t i = 0; i < count; ++i) {
         if (is_branch[i]) {
             const int64_t delta_words =
                 (int64_t)instruction_output_offsets[branch_target_indices[i]] -
                 (int64_t)branch_word_positions[i];
-            if (delta_words < -(1LL << 25) || delta_words >= (1LL << 25)) {
-                return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+            if (is_branch[i] == 1u) {
+                if (delta_words < -(1LL << 25) || delta_words >= (1LL << 25)) {
+                    return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+                }
+                output[branch_word_positions[i]] =
+                    0x14000000u | ((uint32_t)delta_words & 0x03FFFFFFu);
+            } else {
+                if (delta_words < -(1LL << 18) || delta_words >= (1LL << 18)) {
+                    return PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION;
+                }
+                output[branch_word_positions[i]] =
+                    (output[branch_word_positions[i]] & 0xFF00001Fu) |
+                    (((uint32_t)delta_words & 0x7FFFFu) << 5);
             }
-            output[branch_word_positions[i]] =
-                0x14000000u | ((uint32_t)delta_words & 0x03FFFFFFu);
         }
     }
 
