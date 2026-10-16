@@ -31,7 +31,7 @@ static PyObject *py_execute_u64(PyObject *self, PyObject *args) {
     }
     if (status == ARM64_RUNTIME_INVALID_ARGUMENT) {
         PyErr_SetString(PyExc_ValueError,
-                        "code must be 1..4096 bytes and 4-byte aligned");
+                        "code must be 1..8192 bytes and 4-byte aligned");
         return NULL;
     }
     if (status != ARM64_RUNTIME_OK) {
