@@ -94,6 +94,20 @@ class ARM64EncoderTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             encode_instruction("b #2")
 
+    def test_branch_signed_range_boundaries(self):
+        self.assertEqual(
+            encode_instruction("b #-134217728"),
+            0x16000000,
+        )
+        self.assertEqual(
+            encode_instruction("b #134217724"),
+            0x15FFFFFF,
+        )
+
+    def test_reject_branch_below_minimum_offset(self):
+        with self.assertRaises(ValueError):
+            encode_instruction("b #-134217732")
+
     def test_reject_out_of_range_branch(self):
         with self.assertRaises(ValueError):
             encode_instruction("b #134217728")
