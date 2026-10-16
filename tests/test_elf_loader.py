@@ -53,7 +53,7 @@ class PS3ELFLoaderTests(unittest.TestCase):
         entry = load_elf_segments(data, memory, memory_base=0x10000)
         self.assertEqual(entry, 0x10000)
         self.assertEqual(memory[:4], b"TEST")
-        self.assertEqual(memory[4:8], b"\\x00" * 4)
+        self.assertEqual(memory[4:8], b"\x00" * 4)
 
     def test_rejects_segment_outside_guest_memory(self):
         with self.assertRaisesRegex(ValueError, "bounds"):
