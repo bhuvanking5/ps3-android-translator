@@ -64,7 +64,7 @@ class ARM64EncoderTests(unittest.TestCase):
         self.assertEqual(encode_instruction("mov x0, #0"), 0xD2800000)
         self.assertEqual(
             encode_instruction("mov x30, #65535"),
-            0xD29FFFE0,
+            0xD29FFFFE,
         )
 
     def test_reject_invalid_assembly_input_types(self):
