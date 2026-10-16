@@ -74,7 +74,7 @@ int main(void) {
     CHECK(output[70] == 0x17FFFFFEu); /* B from the relocated branch back to the previous ADDI */
 
     /* ORI/XORI immediate forms use RT as source and RA as destination. */
-    const logical_immediate[] = {
+    const uint32_t logical_immediate[] = {
         (14u << 26) | (3u << 21) | 0x0F0Fu,
         (24u << 26) | (3u << 21) | (4u << 16) | 0x00F0u,
         (26u << 26) | (4u << 21) | (5u << 16) | 0x0F00u
