@@ -60,6 +60,29 @@ class ARM64EncoderTests(unittest.TestCase):
         ])
         self.assertEqual(len(result), 8)
 
+    def test_mov_immediate_boundaries(self):
+        self.assertEqual(encode_instruction("mov x0, #0"), 0xD2800000)
+        self.assertEqual(
+            encode_instruction("mov x30, #65535"),
+            0xD29FFFE0,
+        )
+
+    def test_reject_invalid_assembly_input_types(self):
+        for assembly in (None, 7, b"mov x0, #1"):
+            with self.subTest(assembly=assembly):
+                with self.assertRaisesRegex(
+                    ValueError, "must be a string"
+                ):
+                    encode_instruction(assembly)
+
+    def test_program_encoding_rejects_non_sequence(self):
+        for instructions in (None, "mov x0, #1", 3):
+            with self.subTest(instructions=instructions):
+                with self.assertRaisesRegex(
+                    ValueError, "list or tuple"
+                ):
+                    encode_program(instructions)
+
     def test_reject_invalid_register(self):
         with self.assertRaises(ValueError):
             encode_instruction("add x31, x4, #10")
