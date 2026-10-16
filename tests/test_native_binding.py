@@ -1,8 +1,8 @@
 """Smoke tests for the optional ps3_native extension.
 
-These tests validate the API boundary only. They never execute supplied machine code.
-The main Python suite can run before the optional extension is built; in that case
-these tests are skipped and CTest runs them after the extension build.
+These tests validate input checking and the bounded translator/runtime API.
+The execution test only supplies a tiny supported arithmetic program, never
+arbitrary ARM64 bytes.
 """
 import importlib
 import platform
@@ -16,6 +16,9 @@ except ImportError:
 
 @unittest.skipIf(ps3_native is None, "optional ps3_native extension is not built yet")
 class NativeBindingTests(unittest.TestCase):
+    # addi r3,r0,7; addi r4,r3,5; add r5,r3,r4; subf r6,r3,r5
+    SIMPLE_PPC_PROGRAM = [0x38600007, 0x38830005, 0x7CA32214, 0x7CC32850]
+
     def test_rejects_empty_code(self):
         with self.assertRaises(ValueError):
             ps3_native.execute_u64(b"")
@@ -35,6 +38,32 @@ class NativeBindingTests(unittest.TestCase):
     def test_reports_unsupported_architecture(self):
         with self.assertRaisesRegex(RuntimeError, "requires an AArch64 process"):
             ps3_native.execute_u64(b"abcd")
+
+    def test_rejects_invalid_result_register(self):
+        with self.assertRaisesRegex(ValueError, "result_gpr"):
+            ps3_native.translate_and_execute_ppc(self.SIMPLE_PPC_PROGRAM, 18)
+
+    def test_rejects_empty_program(self):
+        with self.assertRaisesRegex(ValueError, "1..256"):
+            ps3_native.translate_and_execute_ppc([], 6)
+
+    def test_rejects_unsupported_powerpc_instruction(self):
+        with self.assertRaisesRegex(ValueError, "unsupported PowerPC"):
+            ps3_native.translate_and_execute_ppc([0x40000004], 3)
+
+    def test_rejects_out_of_range_instruction_word(self):
+        with self.assertRaisesRegex(ValueError, "uint32"):
+            ps3_native.translate_and_execute_ppc([0x100000000], 3)
+
+    def test_translate_and_execute_matches_reference_or_rejects_host(self):
+        if platform.machine().lower() not in ("aarch64", "arm64"):
+            with self.assertRaisesRegex(RuntimeError, "requires an AArch64 process"):
+                ps3_native.translate_and_execute_ppc(self.SIMPLE_PPC_PROGRAM, 6)
+        else:
+            self.assertEqual(
+                ps3_native.translate_and_execute_ppc(self.SIMPLE_PPC_PROGRAM, 6),
+                12,
+            )
 
 
 if __name__ == "__main__":
