@@ -20,6 +20,13 @@ def make_addi(rt, ra, immediate):
     )
 
 
+def make_mulld(rt, ra, rb, record=False):
+    return (
+        (31 << 26) | (rt << 21) | (ra << 16)
+        | (rb << 11) | (233 << 1) | int(record)
+    )
+
+
 def make_add(rt, ra, rb):
     return (
         (31 << 26)
@@ -76,6 +83,25 @@ class CPUTests(unittest.TestCase):
         cpu.execute(make_addi(3, 4, -4))
 
         self.assertEqual(cpu.gpr[3], 6)
+
+    def test_mulld_wraps_result_to_64_bits(self):
+        cpu = CPUState()
+        cpu.gpr[4] = 0xFFFFFFFFFFFFFFFF
+        cpu.gpr[5] = 3
+        cpu.execute(make_mulld(3, 4, 5))
+        self.assertEqual(cpu.gpr[3], 0xFFFFFFFFFFFFFFFD)
+        self.assertEqual(cpu.pc, 4)
+
+    def test_mulld_zero_operand(self):
+        cpu = CPUState()
+        cpu.gpr[4] = 123456
+        cpu.gpr[5] = 0
+        cpu.execute(make_mulld(3, 4, 5))
+        self.assertEqual(cpu.gpr[3], 0)
+
+    def test_mulld_record_form_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "record form"):
+            CPUState().execute(make_mulld(3, 4, 5, record=True))
 
     def test_add(self):
         cpu = CPUState()
