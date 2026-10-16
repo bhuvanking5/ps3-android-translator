@@ -20,6 +20,15 @@ def decode_word(word):
             immediate -= 0x10000
         return {"mnemonic": "addi", "rt": rt, "ra": ra, "immediate": immediate}
 
+    # Logical immediates: RT is source, RA is destination.
+    if opcode in (24, 26):
+        return {
+            "mnemonic": "ori" if opcode == 24 else "xori",
+            "rt": (word >> 21) & 0x1F,
+            "ra": (word >> 16) & 0x1F,
+            "immediate": word & 0xFFFF,
+        }
+
     # Compare immediate signed word: cmpwi — opcode 11.
     if opcode == 11:
         immediate = word & 0xFFFF
