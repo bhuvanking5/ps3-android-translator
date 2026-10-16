@@ -31,6 +31,21 @@ class DecoderTests(unittest.TestCase):
         self.assertEqual(result["rb"], 5)
         self.assertFalse(result["record"])
 
+    def test_decode_logical_immediates(self):
+        ori = (24 << 26) | (3 << 21) | (4 << 16) | 0xF0
+        result = decode_word(ori)
+        self.assertEqual(result["mnemonic"], "ori")
+        self.assertEqual(result["rt"], 3)
+        self.assertEqual(result["ra"], 4)
+        self.assertEqual(result["immediate"], 0xF0)
+
+        xori = (26 << 26) | (5 << 21) | (6 << 16) | 0xF00
+        result = decode_word(xori)
+        self.assertEqual(result["mnemonic"], "xori")
+        self.assertEqual(result["rt"], 5)
+        self.assertEqual(result["ra"], 6)
+        self.assertEqual(result["immediate"], 0xF00)
+
     def test_decode_cmpwi(self):
         word = (11 << 26) | (2 << 23) | (5 << 16) | 0xFFFC
         result = decode_word(word)
