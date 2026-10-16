@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Conservative capacity for up to 10 emitted words per PPC instruction. */
-#define PPC_TO_ARM64_MAX_WORDS 2600u
+/* Covers the worst-case cmpwi expansion (11 words per instruction) plus setup. */
+#define PPC_TO_ARM64_MAX_WORDS 3200u
 
 typedef enum {
     PPC_TO_ARM64_OK = 0,
@@ -21,7 +21,7 @@ typedef enum {
  * unconditional b, and bc for BO=4/12 using a selected CR bit. Branch targets
  * must be inside the supplied sequence; absolute/linked branches and other BO
  * forms are rejected. Local branches are relocated after offsets are known.
- * The 320-byte frame stores 32 GPRs and individual CR bits; x16/x17 are
+ * The 512-byte frame stores 32 GPRs and all 32 modeled CR bits; x16/x17 are
  * temporary scratch registers. Initial PowerPC GPRs are zero. The generated
  * function returns the selected GPR in x0 and restores SP before returning.
  * This is research code, not a sandbox or a PS3 game translator.
