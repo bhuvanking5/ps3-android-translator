@@ -4,7 +4,7 @@
 
 - The C native runtime validates arguments and uses write-then-execute memory permissions on AArch64.
 - A bounded C PowerPC-to-ARM64 translator emits a restricted instruction subset: ADDI, ADD, SUBF, MULLD, OR, AND, and XOR.
-- The translator rejects unsupported instructions and register numbers that would use ARM64 platform/callee-saved registers without a save/restore implementation.
+- The translator stores all 32 PowerPC GPRs in a 256-byte stack frame and uses x16/x17 as temporary registers; generated code restores SP before returning.
 - The Android JNI smoke-test path runs a fixed, built-in PowerPC arithmetic program through both the reference interpreter and the C translator, executes the generated ARM64 words, and compares the result.
 - The optional CPython extension now exposes `translate_and_execute_ppc(instruction_words, result_gpr)`. It accepts a sequence of 32-bit PowerPC words, enforces the instruction/register limits, translates only supported instructions, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
 - `prototype/native_execution.py` provides a Python wrapper around that API.
@@ -14,7 +14,7 @@
 ## Not yet verified
 
 - The latest CI run must finish successfully before the new binding and execution path can be marked CI-verified.
-- The native API covers only a tiny straight-line arithmetic program; it is not a general PowerPC translator, a full integration of every Python translator output, or a real PS3 executable.
+- The native API covers only a tiny straight-line arithmetic/logical subset; it is not a general PowerPC translator, a full integration of every Python translator output, or a real PS3 executable.
 - The Android JNI build must pass, and the smoke test still needs to be exercised on a physical ARM64 Android device.
 - No PS3 title has been run.
 
