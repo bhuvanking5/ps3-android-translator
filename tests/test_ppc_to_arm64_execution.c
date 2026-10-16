@@ -49,18 +49,6 @@ static int check_program(const char *label, const uint32_t *program,
     printf("PASS: %s translation/reference checks passed; execution requires AArch64\n",
            label);
 #endif
-    const uint32_t spilled_register_program[] = {
-        (14u << 26) | (31u << 21) | 12000u, /* addi r31,r0,12000 */
-        (14u << 26) | (30u << 21) | (31u << 16) | ((uint32_t)-5000 & 0xffffu),
-        (31u << 26) | (29u << 21) | (31u << 16) |
-            (30u << 11) | (40u << 1) /* subf r29,r31,r30 => -5000 */
-    };
-    if (check_program("r29-r31 register spill/load", spilled_register_program,
-            sizeof(spilled_register_program) / sizeof(spilled_register_program[0]),
-            29u, UINT64_MAX - 4999u) != 0) {
-        return 1;
-    }
-
     return 0;
 }
 
@@ -93,6 +81,18 @@ int main(void) {
     if (check_program("OR/AND/XOR", logical_program,
             sizeof(logical_program) / sizeof(logical_program[0]),
             7u, 0x0FF0u) != 0) {
+        return 1;
+    }
+
+    const uint32_t spilled_register_program[] = {
+        (14u << 26) | (31u << 21) | 12000u, /* addi r31,r0,12000 */
+        (14u << 26) | (30u << 21) | (31u << 16) | ((uint32_t)-5000 & 0xffffu),
+        (31u << 26) | (29u << 21) | (31u << 16) |
+            (30u << 11) | (40u << 1) /* subf r29,r31,r30 => -5000 */
+    };
+    if (check_program("r29-r31 register spill/load", spilled_register_program,
+            sizeof(spilled_register_program) / sizeof(spilled_register_program[0]),
+            29u, UINT64_MAX - 4999u) != 0) {
         return 1;
     }
 
