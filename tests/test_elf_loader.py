@@ -6,7 +6,7 @@ import unittest
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from prototype.elf_loader import inspect_ps3_elf, load_elf_segments, ELF_HEADER, PROGRAM_HEADER
 from prototype.cpu import CPUState
-from prototype.program import run_program
+from prototype.program import run_memory_program
 
 
 def make_elf(machine=21, elf_class=2, endian=2, truncate=False, payload=b"TEST"):
@@ -66,16 +66,25 @@ class PS3ELFLoaderTests(unittest.TestCase):
         data = make_elf(payload=code)
         memory = bytearray(0x100)
         entry = load_elf_segments(data, memory, memory_base=0x10000)
-        words = [
-            int.from_bytes(memory[i:i + 4], "big")
-            for i in range(0, len(code), 4)
-        ]
         cpu = CPUState()
-        steps = run_program(cpu, words, start_pc=entry)
+        steps = run_memory_program(cpu, memory, memory_base=0x10000,
+                                   start_pc=entry, code_size=len(code))
         self.assertEqual(steps, 2)
         self.assertEqual(cpu.gpr[3], 7)
         self.assertEqual(cpu.gpr[4], 12)
         self.assertEqual(cpu.pc, entry + 8)
+
+    def test_memory_runner_rejects_code_outside_memory(self):
+        cpu = CPUState()
+        with self.assertRaisesRegex(ValueError, "bounds"):
+            run_memory_program(cpu, bytearray(4), memory_base=0x10000,
+                               start_pc=0x10000, code_size=8)
+
+    def test_memory_runner_rejects_unaligned_start(self):
+        cpu = CPUState()
+        with self.assertRaisesRegex(ValueError, "aligned"):
+            run_memory_program(cpu, bytearray(8), memory_base=0x10000,
+                               start_pc=0x10002, code_size=4)
 
     def test_rejects_segment_outside_guest_memory(self):
         with self.assertRaisesRegex(ValueError, "bounds"):
