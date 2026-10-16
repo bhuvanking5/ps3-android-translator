@@ -18,11 +18,22 @@ int main(void) {
     CHECK(state.right_x == 1.0f);
     CHECK(state.right_y == -0.5f);
 
+    ps3_controller_report report = ps3_controller_input_read_report();
+    CHECK(report.buttons == 0x15u);
+    CHECK(report.left_x == 0u);
+    CHECK(report.left_y == 159u);
+    CHECK(report.right_x == 255u);
+    CHECK(report.right_y == 64u);
+
     ps3_controller_input_publish(0u, 2.0f, -2.0f, NAN, INFINITY);
     state = ps3_controller_input_read();
     CHECK(state.pressed_mask == 0u);
     CHECK(state.left_x == 0.0f && state.left_y == 0.0f);
     CHECK(state.right_x == 0.0f && state.right_y == 0.0f);
+    report = ps3_controller_input_read_report();
+    CHECK(report.buttons == 0u);
+    CHECK(report.left_x == 128u && report.left_y == 128u);
+    CHECK(report.right_x == 128u && report.right_y == 128u);
 
     puts("Native controller input mailbox tests passed.");
     return 0;
