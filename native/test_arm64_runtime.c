@@ -27,6 +27,11 @@ int main(void) {
         fputs("unaligned-size check failed\n", stderr);
         return 1;
     }
+    if (arm64_execute_u64(dummy_code, 4097, &result) !=
+        ARM64_RUNTIME_INVALID_ARGUMENT) {
+        fputs("oversized-code check failed\n", stderr);
+        return 1;
+    }
 
 #if !defined(__aarch64__)
     if (arm64_execute_u64(dummy_code, sizeof(dummy_code), &result) !=
