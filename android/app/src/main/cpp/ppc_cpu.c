@@ -1,7 +1,8 @@
 #include "ppc_cpu.h"
 
-ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
-                           uint64_t registers[32]) {
+ppc_cpu_status ppc_cpu_run_with_read32(
+    const uint32_t *instructions, size_t count, uint64_t registers[32],
+    ppc_cpu_read32_fn read32, void *read_context) {
     if (instructions == 0 || registers == 0) return PPC_CPU_INVALID_ARGUMENT;
     if (count == 0u || count > PPC_CPU_MAX_INSTRUCTIONS)
         return PPC_CPU_INSTRUCTION_LIMIT;
@@ -57,6 +58,15 @@ ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
             const int32_t rhs = (int16_t)(ins & 0xffffu);
             if (((ins >> 21) & 1u) != 0u) return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             condition[bf] = lhs < rhs ? 8u : lhs > rhs ? 4u : 2u;
+        } else if (opcode == 32u) { /* LWZ: callback-backed 32-bit guest read */
+            if (read32 == 0) return PPC_CPU_MEMORY_ACCESS_ERROR;
+            const int32_t displacement = (int16_t)(ins & 0xffffu);
+            const uint64_t base = (ra == 0u) ? 0u : registers[ra];
+            const uint32_t address = (uint32_t)(base + (uint64_t)displacement);
+            uint32_t value = 0u;
+            if (!read32(read_context, address, &value))
+                return PPC_CPU_MEMORY_ACCESS_ERROR;
+            registers[rt] = (uint64_t)value;
         } else if (opcode == 7u) { /* MULLI: signed 16-bit immediate */
             const int64_t imm = (int16_t)(ins & 0xffffu);
             registers[rt] = registers[ra] * (uint64_t)imm;
@@ -92,4 +102,9 @@ ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
         ++pc;
     }
     return PPC_CPU_OK;
+}
+
+ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
+                           uint64_t registers[32]) {
+    return ppc_cpu_run_with_read32(instructions, count, registers, 0, 0);
 }
