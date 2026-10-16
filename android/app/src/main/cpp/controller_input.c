@@ -45,7 +45,7 @@ void ps3_controller_input_publish(uint32_t pressed_mask,
 ps3_controller_input ps3_controller_input_read(void) {
     ps3_controller_input state;
     uint32_t before, after;
-    do {
+    for (;;) {
         before = atomic_load_explicit(&g_sequence, memory_order_acquire);
         if (before & 1u) continue;
         state.pressed_mask = atomic_load_explicit(&g_pressed_mask, memory_order_relaxed);
@@ -54,8 +54,8 @@ ps3_controller_input ps3_controller_input_read(void) {
         state.right_x = bits_float(atomic_load_explicit(&g_right_x_bits, memory_order_relaxed));
         state.right_y = bits_float(atomic_load_explicit(&g_right_y_bits, memory_order_relaxed));
         after = atomic_load_explicit(&g_sequence, memory_order_acquire);
-    } while (before != after || (after & 1u));
-    return state;
+        if (before == after && !(after & 1u)) return state;
+    }
 }
 
 static uint8_t axis_to_u8(float value) {
