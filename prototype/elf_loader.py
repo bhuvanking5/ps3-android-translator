@@ -99,7 +99,7 @@ def load_elf_segments(data, memory, memory_base=0):
         file_offset = segment["file_offset"]
         file_size = segment["file_size"]
         memory_size = segment["memory_size"]
-        memory[offset:offset + memory_size] = b"\\x00" * memory_size
+        memory[offset:offset + memory_size] = b"\x00" * memory_size
         memory[offset:offset + file_size] = raw[file_offset:file_offset + file_size]
 
     return info["entry_point"]
