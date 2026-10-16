@@ -29,6 +29,11 @@ class ARM64EncoderTests(unittest.TestCase):
             0xD1001063,
         )
 
+    def test_mul_registers(self):
+        from prototype.arm64_encoder import encode_instruction
+        self.assertEqual(encode_instruction("mul x0, x1, x2"), 0x9B027C20)
+        self.assertEqual(encode_instruction("mul x5, x30, x7"), 0x9B077FC5)
+
     def test_add_registers(self):
         self.assertEqual(
             encode_instruction("add x3, x4, x5"),
