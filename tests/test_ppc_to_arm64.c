@@ -43,7 +43,7 @@ int main(void) {
     CHECK(output[output_count - 3] ==
           (0xF9400000u | (6u << 10) | (31u << 5))); /* load result into x0 */
     CHECK(output[output_count - 2] ==
-          (0x91000000u | (320u << 10) | (31u << 5) | 31u)); /* restore SP */
+          (0x91000000u | (512u << 10) | (31u << 5) | 31u)); /* restore SP */
     CHECK(output[output_count - 1] == 0xD65F03C0u); /* ret */
 
     const uint32_t negative[] = { addi(3, 0, -2) };
