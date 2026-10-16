@@ -42,18 +42,25 @@ int main(void) {
     puts("PASS: argument validation; execution skipped on non-AArch64 host");
     return 0;
 #else
-    /* mov x0, #42; ret — AArch64 little-endian instruction bytes. */
+    /*
+     * Fixed, trusted ARM64 sequence shared with the Android bridge and
+     * Python encoder regression test:
+     *   mov x0, #7; mov x1, #19; sub x0, x1, x0; ret
+     * Expected result: 12. Never source executable bytes from game files.
+     */
     const uint8_t code[] = {
-        0x40, 0x05, 0x80, 0xD2,
+        0xE0, 0x00, 0x80, 0xD2,
+        0x61, 0x02, 0x80, 0xD2,
+        0x20, 0x00, 0x00, 0xCB,
         0xC0, 0x03, 0x5F, 0xD6
     };
     int status = arm64_execute_u64(code, sizeof(code), &result);
-    if (status != ARM64_RUNTIME_OK || result != 42) {
-        fprintf(stderr, "native execution failed: status=%d result=%llu\n",
+    if (status != ARM64_RUNTIME_OK || result != 12) {
+        fprintf(stderr, "native execution failed: status=%d result=%llu\\n",
                 status, (unsigned long long)result);
         return 1;
     }
-    puts("PASS: argument validation and ARM64 code returned 42");
+    puts("PASS: argument validation and ARM64 code returned 12 (19 - 7)");
     return 0;
 #endif
 }
