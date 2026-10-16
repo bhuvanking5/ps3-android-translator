@@ -4,7 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define PPC_TO_ARM64_MAX_WORDS 258u
+/* Worst case: 4 emitted words per PPC instruction plus prologue/init/return. */
+#define PPC_TO_ARM64_MAX_WORDS 1100u
 
 typedef enum {
     PPC_TO_ARM64_OK = 0,
@@ -15,9 +16,10 @@ typedef enum {
 } ppc_to_arm64_status;
 
 /*
- * Translate a deliberately tiny PowerPC subset into AArch64 words.
- * GPRs r0-r17 map to x0-x17 only (x18/platform and callee-saved registers
- * are excluded). The generated function returns the selected PPC GPR in x0.
+ * Translate a deliberately small PowerPC subset into AArch64 words.
+ * Every PowerPC GPR r0-r31 is stored in a 256-byte stack frame; x16/x17 are
+ * temporary scratch registers. Initial PowerPC GPRs are zero. The generated
+ * function returns the selected GPR in x0 and restores SP before returning.
  * This is research code, not a sandbox or a PS3 game translator.
  */
 ppc_to_arm64_status ppc_translate_to_arm64(
