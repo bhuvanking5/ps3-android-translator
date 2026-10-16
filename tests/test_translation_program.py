@@ -25,6 +25,10 @@ def ppc_subf(rt, ra, rb):
     )
 
 
+def ppc_b(displacement):
+    return (18 << 26) | (displacement & 0x03FFFFFC)
+
+
 class TranslationProgramTests(unittest.TestCase):
     def test_native_smoke_sequence_matches_arm64_encoder(self):
         # The Android bridge uses only this fixed, trusted test program:
@@ -64,6 +68,16 @@ class TranslationProgramTests(unittest.TestCase):
             [int.from_bytes(machine_code[i:i + 4], "little")
              for i in range(0, len(machine_code), 4)],
             [0xD28000E3, 0xD2800264, 0xCB030085],
+        )
+
+    def test_relative_branch_translates_and_encodes(self):
+        # A relative PowerPC branch eight bytes forward maps to ARM64 B #8.
+        translated = translate_program([ppc_b(8)], start_address=0x1000)
+        self.assertEqual(translated, ["    b #8"])
+        machine_code = encode_program(translated)
+        self.assertEqual(
+            int.from_bytes(machine_code, "little"),
+            0x14000002,
         )
 
 
