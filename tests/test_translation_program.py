@@ -26,7 +26,22 @@ def ppc_subf(rt, ra, rb):
 
 
 class TranslationProgramTests(unittest.TestCase):
-    def test_multiple_instructions_translate_and_encode_in_order(self):
+    def test_native_smoke_sequence_matches_arm64_encoder(self):
+        # The Android bridge uses only this fixed, trusted test program:
+        # x0 = 7; x1 = 19; x0 = x1 - x0; return x0 (12).
+        native_sequence = [
+            "mov x0, #7",
+            "mov x1, #19",
+            "sub x0, x1, x0",
+        ]
+        machine_code = encode_program(native_sequence)
+        words = [
+            int.from_bytes(machine_code[i:i + 4], "little")
+            for i in range(0, len(machine_code), 4)
+        ]
+        self.assertEqual(words, [0xD28000E0, 0xD2800261, 0xCB000020])
+
+    def test_multiple_instructions_translate_and_encode_in_order:
         # r3 = 7; r4 = 19; r5 = r4 - r3 = 12.
         guest_program = [
             ppc_addi(3, 0, 7),
