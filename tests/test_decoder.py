@@ -10,6 +10,14 @@ from prototype.ppc_decoder import decode_word, decode_bytes
 
 class DecoderTests(unittest.TestCase):
 
+    def test_decode_mulli(self):
+        word = (7 << 26) | (3 << 21) | (4 << 16) | 0xFFFC
+        result = decode_word(word)
+        self.assertEqual(result["mnemonic"], "mulli")
+        self.assertEqual(result["rt"], 3)
+        self.assertEqual(result["ra"], 4)
+        self.assertEqual(result["immediate"], -4)
+
     def test_decode_addi(self):
         word = (14 << 26) | (3 << 21) | (4 << 16) | 10
         result = decode_word(word)
