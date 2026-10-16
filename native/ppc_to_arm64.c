@@ -2,7 +2,7 @@
 
 #define PPC_MAX_INSTRUCTIONS 256u
 #define PPC_GPR_COUNT 32u
-#define PPC_FRAME_BYTES 320u
+#define PPC_FRAME_BYTES 512u
 #define SCRATCH_A 16u
 #define SCRATCH_B 17u
 
@@ -86,7 +86,7 @@ ppc_to_arm64_status ppc_translate_to_arm64(
     if (!emit(output, output_capacity, &used, movz(SCRATCH_A, 0u))) {
         return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
     }
-    for (unsigned reg = 0; reg < 40u; ++reg) {
+    for (unsigned reg = 0; reg < 64u; ++reg) {
         if (!emit(output, output_capacity, &used, store_gpr(SCRATCH_A, reg))) {
             return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
         }
