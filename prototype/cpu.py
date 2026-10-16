@@ -34,6 +34,8 @@ class CPUState:
             self.pc = old_pc + 4
 
         elif op == "or":
+            if ins["record"]:
+                raise ValueError("The or record form is not supported yet")
             self.gpr[ins["ra"]] = (
                 self.gpr[ins["rt"]] | self.gpr[ins["rb"]]
             ) & MASK64
