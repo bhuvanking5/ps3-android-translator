@@ -1,4 +1,3 @@
-
 """Decode a small subset of 32-bit PowerPC instructions."""
 
 
@@ -47,47 +46,25 @@ def decode_word(word):
             "link": bool(word & 0x1),
         }
 
-    # add RT, RA, RB — extended opcode 266
+    # Extended opcode 31 arithmetic and logical instructions.
     if opcode == 31:
         extended_opcode = (word >> 1) & 0x3FF
-        if extended_opcode == 233:
-            return {
-                "mnemonic": "mulld",
-                "rt": (word >> 21) & 0x1F,
-                "ra": (word >> 16) & 0x1F,
-                "rb": (word >> 11) & 0x1F,
-                "record": bool(word & 1),
-            }
-
-        if extended_opcode == 266:
-            return {
-                "mnemonic": "add",
-                "rt": (word >> 21) & 0x1F,
-                "ra": (word >> 16) & 0x1F,
-                "rb": (word >> 11) & 0x1F,
-                "record": bool(word & 1),
-            }
-
-        if extended_opcode == 40:
-            return {
-                "mnemonic": "subf",
-                "rt": (word >> 21) & 0x1F,
-                "ra": (word >> 16) & 0x1F,
-                "rb": (word >> 11) & 0x1F,
-                "record": bool(word & 1),
-            }
-
-    # or RA, RS, RB — extended opcode 444 (record bit is handled separately).
-    if opcode == 31:
-        extended_opcode = (word >> 1) & 0x3FF
-        if extended_opcode == 444:
-            return {
-                "mnemonic": "or",
-                "rt": (word >> 21) & 0x1F,
-                "ra": (word >> 16) & 0x1F,
-                "rb": (word >> 11) & 0x1F,
-                "record": bool(word & 1),
-            }
+        common = {
+            "rt": (word >> 21) & 0x1F,
+            "ra": (word >> 16) & 0x1F,
+            "rb": (word >> 11) & 0x1F,
+            "record": bool(word & 1),
+        }
+        mnemonics = {
+            233: "mulld",
+            266: "add",
+            40: "subf",
+            444: "or",
+            28: "and",
+            316: "xor",
+        }
+        if extended_opcode in mnemonics:
+            return {"mnemonic": mnemonics[extended_opcode], **common}
 
     raise ValueError(f"Unsupported PowerPC instruction: 0x{word:08X}")
 
