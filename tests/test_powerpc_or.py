@@ -53,6 +53,14 @@ class PowerPCOrTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "record form"):
             translate_word(ppc_or(3, 4, 5, record=True))
 
+    def test_reference_cpu_rejects_record_form(self):
+        cpu = CPUState()
+        cpu.pc = 0x1000
+        with self.assertRaisesRegex(ValueError, "record form"):
+            cpu.execute(ppc_or(3, 4, 5, record=True))
+        self.assertEqual(cpu.pc, 0x1000)
+        self.assertEqual(cpu.gpr[3], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
