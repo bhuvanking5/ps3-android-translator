@@ -35,3 +35,10 @@ if(PS3_TRANSLATOR_BUILD_PYTHON_BINDING)
     PROPERTIES ENVIRONMENT "PYTHONPATH=$<TARGET_FILE_DIR:ps3_native>"
   )
 endif()
+
+add_executable(test_ppc_cpu
+  tests/test_ppc_cpu.c
+  android/app/src/main/cpp/ppc_cpu.c
+)
+target_compile_options(test_ppc_cpu PRIVATE -Wall -Wextra -Werror)
+add_test(NAME ppc_cpu_subset COMMAND test_ppc_cpu)
