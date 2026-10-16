@@ -67,6 +67,17 @@ int main(void) {
         return 1;
     }
 
+    const uint32_t branch_program[] = {
+        (14u << 26) | (3u << 21) | 1u,
+        (18u << 26) | 8u, /* b +8: skip the next PowerPC instruction */
+        (14u << 26) | (3u << 21) | 99u,
+        (14u << 26) | (4u << 21) | 7u
+    };
+    if (check_program("local unconditional branch", branch_program,
+            sizeof(branch_program) / sizeof(branch_program[0]), 3u, 1u) != 0) {
+        return 1;
+    }
+
     /* Build two values, then test OR, AND, and XOR destination semantics. */
     const uint32_t logical_program[] = {
         (14u << 26) | (3u << 21) | 0x0F0Fu,
