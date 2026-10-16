@@ -71,3 +71,13 @@ add_executable(test_ppc_cpu
 )
 target_compile_options(test_ppc_cpu PRIVATE -Wall -Wextra -Werror)
 add_test(NAME ppc_cpu_subset COMMAND test_ppc_cpu)
+
+add_executable(test_controller_input
+  tests/test_controller_input.c
+  android/app/src/main/cpp/controller_input.c
+)
+target_include_directories(test_controller_input PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_controller_input PRIVATE -Wall -Wextra -Werror)
+add_test(NAME native_controller_input COMMAND test_controller_input)
