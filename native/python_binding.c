@@ -43,11 +43,74 @@ static PyObject *py_execute_u64(PyObject *self, PyObject *args) {
     return PyLong_FromUnsignedLongLong((unsigned long long)result);
 }
 
+static int parse_ppc_words(PyObject *sequence_object,
+                           uint32_t instructions[PPC_CPU_MAX_INSTRUCTIONS],
+                           Py_ssize_t *count_out) {
+    PyObject *sequence = PySequence_Fast(
+        sequence_object, "instruction_words must be a sequence of integers");
+    if (sequence == NULL) return 0;
+
+    const Py_ssize_t count = PySequence_Fast_GET_SIZE(sequence);
+    if (count < 1 || count > (Py_ssize_t)PPC_CPU_MAX_INSTRUCTIONS) {
+        Py_DECREF(sequence);
+        PyErr_SetString(PyExc_ValueError,
+                        "instruction_words must contain 1..256 PowerPC words");
+        return 0;
+    }
+
+    for (Py_ssize_t i = 0; i < count; ++i) {
+        PyObject *item = PySequence_Fast_GET_ITEM(sequence, i);
+        unsigned long value = PyLong_AsUnsignedLong(item);
+        if (PyErr_Occurred()) {
+            Py_DECREF(sequence);
+            return 0;
+        }
+        if (value > UINT32_MAX) {
+            Py_DECREF(sequence);
+            PyErr_SetString(PyExc_ValueError,
+                            "each PowerPC instruction must fit in uint32");
+            return 0;
+        }
+        instructions[i] = (uint32_t)value;
+    }
+
+    Py_DECREF(sequence);
+    *count_out = count;
+    return 1;
+}
+
+static int translate_words(const uint32_t *instructions, size_t count,
+                           int result_gpr,
+                           uint32_t output[PPC_TO_ARM64_MAX_WORDS],
+                           size_t *output_count) {
+    if (result_gpr < 0 || result_gpr >= 18) {
+        PyErr_SetString(PyExc_ValueError,
+                        "result_gpr must be between 0 and 17");
+        return 0;
+    }
+
+    ppc_to_arm64_status status = ppc_translate_to_arm64(
+        instructions, count, (unsigned)result_gpr,
+        output, PPC_TO_ARM64_MAX_WORDS, output_count);
+
+    if (status == PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION) {
+        PyErr_SetString(PyExc_ValueError,
+                        "program contains an unsupported PowerPC instruction or register");
+        return 0;
+    }
+    if (status != PPC_TO_ARM64_OK) {
+        PyErr_SetString(PyExc_ValueError,
+                        "PowerPC program could not be translated within configured limits");
+        return 0;
+    }
+    return 1;
+}
+
 /*
  * Safe, deliberately narrow bridge: callers provide PowerPC instruction
  * words, never ARM64 machine-code bytes. The translator emits only its
- * explicitly supported instruction subset; the result is checked against
- * the reference interpreter before being returned.
+ * explicitly supported instruction subset; execution is checked against
+ * the reference interpreter before the result is returned.
  */
 static PyObject *py_translate_and_execute_ppc(PyObject *self, PyObject *args) {
     (void)self;
@@ -58,56 +121,16 @@ static PyObject *py_translate_and_execute_ppc(PyObject *self, PyObject *args) {
         return NULL;
     }
 
-    if (result_gpr < 0 || result_gpr >= 18) {
-        PyErr_SetString(PyExc_ValueError,
-                        "result_gpr must be between 0 and 17");
-        return NULL;
-    }
-
-    PyObject *sequence = PySequence_Fast(
-        sequence_object, "instruction_words must be a sequence of integers");
-    if (sequence == NULL) return NULL;
-
-    const Py_ssize_t py_count = PySequence_Fast_GET_SIZE(sequence);
-    if (py_count < 1 || py_count > (Py_ssize_t)PPC_CPU_MAX_INSTRUCTIONS) {
-        Py_DECREF(sequence);
-        PyErr_SetString(PyExc_ValueError,
-                        "instruction_words must contain 1..256 PowerPC words");
-        return NULL;
-    }
-
     uint32_t instructions[PPC_CPU_MAX_INSTRUCTIONS];
-    for (Py_ssize_t i = 0; i < py_count; ++i) {
-        PyObject *item = PySequence_Fast_GET_ITEM(sequence, i);
-        unsigned long value = PyLong_AsUnsignedLong(item);
-        if (PyErr_Occurred()) {
-            Py_DECREF(sequence);
-            return NULL;
-        }
-        if (value > UINT32_MAX) {
-            Py_DECREF(sequence);
-            PyErr_SetString(PyExc_ValueError,
-                            "each PowerPC instruction must fit in uint32");
-            return NULL;
-        }
-        instructions[i] = (uint32_t)value;
+    Py_ssize_t py_count = 0;
+    if (!parse_ppc_words(sequence_object, instructions, &py_count)) {
+        return NULL;
     }
-    Py_DECREF(sequence);
 
     uint32_t arm64_words[PPC_TO_ARM64_MAX_WORDS] = {0};
     size_t arm64_count = 0;
-    ppc_to_arm64_status translate_status = ppc_translate_to_arm64(
-        instructions, (size_t)py_count, (unsigned)result_gpr,
-        arm64_words, PPC_TO_ARM64_MAX_WORDS, &arm64_count);
-
-    if (translate_status == PPC_TO_ARM64_UNSUPPORTED_INSTRUCTION) {
-        PyErr_SetString(PyExc_ValueError,
-                        "program contains an unsupported PowerPC instruction or register");
-        return NULL;
-    }
-    if (translate_status != PPC_TO_ARM64_OK) {
-        PyErr_SetString(PyExc_ValueError,
-                        "PowerPC program could not be translated within configured limits");
+    if (!translate_words(instructions, (size_t)py_count, result_gpr,
+                         arm64_words, &arm64_count)) {
         return NULL;
     }
 
@@ -146,11 +169,52 @@ static PyObject *py_translate_and_execute_ppc(PyObject *self, PyObject *args) {
     return PyLong_FromUnsignedLongLong((unsigned long long)native_result);
 }
 
+/*
+ * Return little-endian ARM64 bytes emitted by the bounded C translator.
+ * This is useful for comparing the Python and C encoders; it does not execute
+ * the returned bytes.
+ */
+static PyObject *py_translate_ppc_to_arm64(PyObject *self, PyObject *args) {
+    (void)self;
+    PyObject *sequence_object = NULL;
+    int result_gpr = -1;
+    if (!PyArg_ParseTuple(args, "Oi:translate_ppc_to_arm64",
+                          &sequence_object, &result_gpr)) {
+        return NULL;
+    }
+
+    uint32_t instructions[PPC_CPU_MAX_INSTRUCTIONS];
+    Py_ssize_t py_count = 0;
+    if (!parse_ppc_words(sequence_object, instructions, &py_count)) {
+        return NULL;
+    }
+
+    uint32_t arm64_words[PPC_TO_ARM64_MAX_WORDS] = {0};
+    size_t arm64_count = 0;
+    if (!translate_words(instructions, (size_t)py_count, result_gpr,
+                         arm64_words, &arm64_count)) {
+        return NULL;
+    }
+
+    uint8_t machine_code[PPC_TO_ARM64_MAX_WORDS * 4u];
+    for (size_t i = 0; i < arm64_count; ++i) {
+        machine_code[i * 4u] = (uint8_t)(arm64_words[i] & 0xffu);
+        machine_code[i * 4u + 1u] = (uint8_t)((arm64_words[i] >> 8) & 0xffu);
+        machine_code[i * 4u + 2u] = (uint8_t)((arm64_words[i] >> 16) & 0xffu);
+        machine_code[i * 4u + 3u] = (uint8_t)((arm64_words[i] >> 24) & 0xffu);
+    }
+
+    return PyBytes_FromStringAndSize(
+        (const char *)machine_code, (Py_ssize_t)(arm64_count * 4u));
+}
+
 static PyMethodDef methods[] = {
     {"execute_u64", py_execute_u64, METH_VARARGS,
      "Execute trusted AArch64 machine-code bytes with no arguments; return x0."},
     {"translate_and_execute_ppc", py_translate_and_execute_ppc, METH_VARARGS,
-     "Translate a bounded list of PowerPC instruction words to ARM64, execute it on AArch64, and compare with the reference interpreter."},
+     "Translate bounded PowerPC words to ARM64, execute on AArch64, and compare with the reference interpreter."},
+    {"translate_ppc_to_arm64", py_translate_ppc_to_arm64, METH_VARARGS,
+     "Translate bounded PowerPC words to little-endian ARM64 bytes without executing them."},
     {NULL, NULL, 0, NULL}
 };
 
