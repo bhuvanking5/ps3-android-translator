@@ -8,7 +8,7 @@ sys.path.insert(
 )
 
 from prototype.arm64_encoder import encode_program
-from prototype.pipeline import translate_program
+from prototype.pipeline import translate_bytes, translate_program
 
 
 def ppc_addi(rt, ra, immediate):
@@ -61,6 +61,22 @@ class TranslationProgramTests(unittest.TestCase):
              for i in range(0, len(machine_code), 4)],
             [0xD28000E0, 0xD2800261, 0xCB000020],
         )
+
+    def test_big_endian_guest_bytes_flow_through_encoder(self):
+        # PowerPC addi r0, r0, 7 as big-endian guest instruction bytes.
+        guest_bytes = ppc_addi(0, 0, 7).to_bytes(4, "big")
+        translated = translate_bytes(guest_bytes)
+        self.assertEqual(translated, ["    mov x0, #7"])
+        self.assertEqual(
+            int.from_bytes(encode_program(translated), "little"),
+            0xD28000E0,
+        )
+
+    def test_translate_bytes_rejects_wrong_input_size(self):
+        for data in (b"", b"\\x00", b"\\x00" * 8, "not bytes"):
+            with self.subTest(data=data):
+                with self.assertRaisesRegex(ValueError, "exactly 4 bytes"):
+                    translate_bytes(data)
 
     def test_multiple_instructions_translate_and_encode_in_order(self):
         # r3 = 7; r4 = 19; r5 = r4 - r3 = 12.
