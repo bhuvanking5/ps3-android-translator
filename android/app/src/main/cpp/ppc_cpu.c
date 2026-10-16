@@ -21,29 +21,24 @@ ppc_cpu_status ppc_cpu_run_with_read32(
         if (opcode == 18u) { /* b: relative, unlinked local branch only */
             if ((ins & 3u) != 0u) return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             int32_t displacement = (int32_t)(ins & 0x03FFFFFCu);
-            if ((displacement & 0x02000000) != 0) {
+            if ((displacement & 0x02000000) != 0)
                 displacement |= (int32_t)0xFC000000u;
-            }
             const int64_t target = (int64_t)pc + displacement / 4;
-            if (target < 0 || target >= (int64_t)count) {
+            if (target < 0 || target >= (int64_t)count)
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
-            }
             pc = (size_t)target;
             continue;
-        } else if (opcode == 16u) { /* bc: restricted CR-only conditional branch */
+        } else if (opcode == 16u) { /* restricted CR-only conditional branch */
             const unsigned bo = (ins >> 21) & 31u;
             const unsigned bi = (ins >> 16) & 31u;
-            if ((ins & 3u) != 0u || (bo != 12u && bo != 4u)) {
+            if ((ins & 3u) != 0u || (bo != 12u && bo != 4u))
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
-            }
             int32_t displacement = (int32_t)(ins & 0x0000FFFCu);
-            if ((displacement & 0x00008000) != 0) {
+            if ((displacement & 0x00008000) != 0)
                 displacement |= (int32_t)0xFFFF0000u;
-            }
             const int64_t target = (int64_t)pc + displacement / 4;
-            if (target < 0 || target >= (int64_t)count) {
+            if (target < 0 || target >= (int64_t)count)
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
-            }
             const unsigned cr_bit =
                 (condition[bi / 4u] >> (3u - (bi % 4u))) & 1u;
             const int take = (bo == 12u) ? (cr_bit != 0u) : (cr_bit == 0u);
@@ -67,6 +62,10 @@ ppc_cpu_status ppc_cpu_run_with_read32(
             if (!read32(read_context, address, &value))
                 return PPC_CPU_MEMORY_ACCESS_ERROR;
             registers[rt] = (uint64_t)value;
+        } else if (opcode == 15u) { /* ADDIS: signed immediate shifted left 16 */
+            const int64_t imm = (int64_t)(int16_t)(ins & 0xffffu) * 65536;
+            const uint64_t base = (ra == 0u) ? 0u : registers[ra];
+            registers[rt] = base + (uint64_t)imm;
         } else if (opcode == 7u) { /* MULLI: signed 16-bit immediate */
             const int64_t imm = (int16_t)(ins & 0xffffu);
             registers[rt] = registers[ra] * (uint64_t)imm;
@@ -80,25 +79,16 @@ ppc_cpu_status ppc_cpu_run_with_read32(
             registers[ra] = registers[rt] ^ (uint64_t)(ins & 0xffffu);
         } else if (opcode == 31u) {
             const unsigned xo = (ins >> 1) & 0x3ffu;
-            if (xo == 266u) { /* ADD */
-                registers[rt] = registers[ra] + registers[rb];
-            } else if (xo == 40u) { /* SUBF */
-                registers[rt] = registers[rb] - registers[ra];
-            } else if (xo == 233u) { /* MULLD, record form is a distinct XO */
-                registers[rt] = registers[ra] * registers[rb];
-            } else if (xo == 444u) { /* OR: RS field aliases RT in this decoder */
-                registers[ra] = registers[rt] | registers[rb];
-            } else if (xo == 28u) { /* AND */
-                registers[ra] = registers[rt] & registers[rb];
-            } else if (xo == 316u) { /* XOR */
-                registers[ra] = registers[rt] ^ registers[rb];
-            } else {
-                return PPC_CPU_UNSUPPORTED_INSTRUCTION;
-            }
+            if (xo == 266u) registers[rt] = registers[ra] + registers[rb];
+            else if (xo == 40u) registers[rt] = registers[rb] - registers[ra];
+            else if (xo == 233u) registers[rt] = registers[ra] * registers[rb];
+            else if (xo == 444u) registers[ra] = registers[rt] | registers[rb];
+            else if (xo == 28u) registers[ra] = registers[rt] & registers[rb];
+            else if (xo == 316u) registers[ra] = registers[rt] ^ registers[rb];
+            else return PPC_CPU_UNSUPPORTED_INSTRUCTION;
         } else {
             return PPC_CPU_UNSUPPORTED_INSTRUCTION;
         }
-        /* PowerPC GPR0 is writable; ADDI with RA=0 specifically reads zero. */
         ++pc;
     }
     return PPC_CPU_OK;
