@@ -12,7 +12,6 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from prototype.native_pipeline import translate_program_to_machine_code
 
 try:
     ps3_native = importlib.import_module("ps3_native")
@@ -23,12 +22,6 @@ except ImportError:
 @unittest.skipIf(ps3_native is None, "optional ps3_native extension is not built yet")
 class NativeBindingTests(unittest.TestCase):
     SIMPLE_PPC_PROGRAM = [0x38600007, 0x38830005, 0x7CA32214, 0x7CC32850]
-    FUNCTION_EPILOGUE = {
-        3: bytes.fromhex("e00303aac0035fd6"),
-        4: bytes.fromhex("e00304aac0035fd6"),
-        6: bytes.fromhex("e00306aac0035fd6"),
-    }
-
     def test_rejects_empty_code(self):
         with self.assertRaises(ValueError):
             ps3_native.execute_u64(b"")
@@ -72,28 +65,28 @@ class NativeBindingTests(unittest.TestCase):
         self.assertLessEqual(len(native_bytes), 4 * 1100)
         self.assertEqual(native_bytes[-4:], bytes.fromhex('c0035fd6'))
 
-    def test_c_translator_matches_python_encoder_for_addi(self):
+    def test_c_translator_emits_bounded_code_for_addi(self):
         self.assert_translator_output_is_bounded([0x38600007], 3)
 
-    def test_c_translator_matches_python_encoder_for_two_addi_instructions(self):
+    def test_c_translator_emits_bounded_code_for_two_addi_instructions(self):
         self.assert_translator_output_is_bounded([0x38600007, 0x38830005], 4)
 
-    def test_c_translator_matches_python_encoder_for_add(self):
+    def test_c_translator_emits_bounded_code_for_add(self):
         self.assert_translator_output_is_bounded([0x7C642A14], 3)
 
-    def test_c_translator_matches_python_encoder_for_subf(self):
+    def test_c_translator_emits_bounded_code_for_subf(self):
         self.assert_translator_output_is_bounded([0x7C642850], 3)
 
-    def test_c_translator_matches_python_encoder_for_mulld(self):
+    def test_c_translator_emits_bounded_code_for_mulld(self):
         self.assert_translator_output_is_bounded([0x7C6429D2], 3)
 
-    def test_c_translator_matches_python_encoder_for_or(self):
+    def test_c_translator_emits_bounded_code_for_or(self):
         self.assert_translator_output_is_bounded([0x7C642B78], 4)
 
-    def test_c_translator_matches_python_encoder_for_and(self):
+    def test_c_translator_emits_bounded_code_for_and(self):
         self.assert_translator_output_is_bounded([0x7C642838], 4)
 
-    def test_c_translator_matches_python_encoder_for_xor(self):
+    def test_c_translator_emits_bounded_code_for_xor(self):
         self.assert_translator_output_is_bounded([0x7C642A78], 4)
 
     def test_translate_and_execute_matches_reference_or_rejects_host(self):
