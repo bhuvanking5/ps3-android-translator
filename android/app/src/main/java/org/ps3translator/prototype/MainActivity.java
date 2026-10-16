@@ -21,9 +21,11 @@ import android.widget.TextView;
 
 public final class MainActivity extends Activity {
     private static final int PICK_GAME = 41;
+    private static final int PICK_FIRMWARE = 42;
     private static final String PREFS = "prototype_settings";
     private LinearLayout layout;
     private TextView selectedGame;
+    private TextView selectedFirmware;
     private TextView resolutionLabel;
     private Spinner frameCap;
     private SeekBar resolution;
@@ -50,6 +52,24 @@ public final class MainActivity extends Activity {
         status.setPadding(0, 18, 0, 16);
         layout.addView(status);
 
+        heading("PS3 firmware");
+        Button addFirmware = new Button(this);
+        addFirmware.setText("Choose firmware file (.PUP)");
+        addFirmware.setOnClickListener(v -> chooseFirmware());
+        layout.addView(addFirmware);
+        String savedFirmware = prefs.getString("selected_firmware_uri", null);
+        selectedFirmware = text(savedFirmware == null
+            ? "No firmware selected. Use an official PS3UPDAT.PUP file you obtained lawfully."
+            : "Previously selected firmware URI: " + savedFirmware
+                + "\nSaved for reference only; firmware is not installed or loaded by this prototype.",
+            14, Color.LTGRAY);
+        selectedFirmware.setPadding(0, 8, 0, 8);
+        layout.addView(selectedFirmware);
+        TextView firmwareNote = text(
+            "Firmware selection is only a UI milestone. This prototype does not install, decrypt, or boot PS3 firmware.",
+            13, Color.rgb(255, 205, 130));
+        layout.addView(firmwareNote);
+
         heading("Games");
         Button addGame = new Button(this);
         addGame.setText("Choose game file");
@@ -72,6 +92,17 @@ public final class MainActivity extends Activity {
             13, Color.rgb(255, 205, 130));
         launchNote.setPadding(0, 4, 0, 8);
         layout.addView(launchNote);
+
+        Button controller = new Button(this);
+        controller.setText("Open virtual controller");
+        controller.setOnClickListener(v ->
+            startActivity(new Intent(this, VirtualControllerActivity.class)));
+        layout.addView(controller);
+        TextView controllerNote = text(
+            "Touch D-pad, sticks and action buttons. This layout test is not connected to game emulation yet.",
+            13, Color.rgb(255, 205, 130));
+        controllerNote.setPadding(0, 8, 0, 8);
+        layout.addView(controllerNote);
 
         Button demoGame = new Button(this);
         demoGame.setText("Run built-in 2D performance test");
@@ -182,10 +213,18 @@ public final class MainActivity extends Activity {
         startActivityForResult(intent, PICK_GAME);
     }
 
+    private void chooseFirmware() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        startActivityForResult(intent, PICK_FIRMWARE);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_GAME && resultCode == RESULT_OK && data != null) {
+        if ((requestCode == PICK_GAME || requestCode == PICK_FIRMWARE)
+                && resultCode == RESULT_OK && data != null) {
             Uri uri = data.getData();
             if (uri != null) {
                 try {
@@ -194,10 +233,45 @@ public final class MainActivity extends Activity {
                 } catch (SecurityException ignored) {
                     // Some document providers do not grant persistable access.
                 }
-                prefs.edit().putString("selected_game_uri", uri.toString()).apply();
-                selectedGame.setText(describeSelectedFile(uri));
+                if (requestCode == PICK_FIRMWARE) {
+                    prefs.edit().putString("selected_firmware_uri", uri.toString()).apply();
+                    selectedFirmware.setText(describeFirmwareFile(uri));
+                } else {
+                    prefs.edit().putString("selected_game_uri", uri.toString()).apply();
+                    selectedGame.setText(describeSelectedFile(uri));
+                }
             }
         }
+    }
+
+    private String describeFirmwareFile(Uri uri) {
+        String displayName = uri.getLastPathSegment();
+        long size = -1L;
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(uri,
+                new String[] {OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE},
+                null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                int sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE);
+                if (nameIndex >= 0 && !cursor.isNull(nameIndex)) displayName = cursor.getString(nameIndex);
+                if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) size = cursor.getLong(sizeIndex);
+            }
+        } catch (RuntimeException ignored) {
+            // Some document providers do not expose metadata.
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        boolean pupName = displayName != null
+            && displayName.toUpperCase(java.util.Locale.ROOT).endsWith(".PUP");
+        String sizeText = size < 0 ? "Size unavailable"
+            : String.format(java.util.Locale.ROOT, "%.2f MiB", size / (1024.0 * 1024.0));
+        return "Selected: " + (displayName == null ? "Unknown file" : displayName)
+            + "\nSize: " + sizeText
+            + "\n" + (pupName ? "PUP extension detected (content not validated)."
+                : "Warning: filename does not end in .PUP.")
+            + "\nSaved for reference only. Firmware verification, installation, decryption and boot are not implemented.";
     }
 
 
