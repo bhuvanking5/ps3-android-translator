@@ -53,6 +53,15 @@ int main(void) {
     CHECK(gpr[5] == 8u && gpr[6] == 6u && gpr[7] == 14u);
 
     memset(gpr, 0, sizeof(gpr));
+    const uint32_t mulli_program[] = {
+        addi(0, 0, 4), /* GPR0 can be written by ADDI */
+        (7u << 26) | (4u << 21) | (0u << 16) | 3u, /* mulli r4,r0,3 */
+        (7u << 26) | (5u << 21) | (4u << 16) | ((uint32_t)-2 & 0xffffu)
+    };
+    CHECK(ppc_cpu_run(mulli_program, 3, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 12u && gpr[5] == UINT64_MAX - 23u);
+
+    memset(gpr, 0, sizeof(gpr));
     const uint32_t negative[] = { addi(3, 0, -2) };
     CHECK(ppc_cpu_run(negative, 1, gpr) == PPC_CPU_OK);
     CHECK(gpr[3] == UINT64_MAX - 1u);
