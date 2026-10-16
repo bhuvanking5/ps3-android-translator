@@ -47,6 +47,8 @@ The CMake build produces the `ps3_arm64_runtime` shared library and a smoke-test
 
 See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md).
 
+For the practical route toward real Android gameplay, see [Fastest path to PS3 gameplay](docs/FASTEST_PATH_TO_PS3_GAMEPLAY.md).
+
 ## Continuous integration
 
 The `.github/workflows/prototype-validation.yml` workflow runs the host-side C/Python test suites and builds the Android debug APK. When the Android build job succeeds, its APK is uploaded as the `ps3-translator-prototype-debug` workflow artifact.
