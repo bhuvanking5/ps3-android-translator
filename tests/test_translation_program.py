@@ -9,12 +9,21 @@ sys.path.insert(
 
 from prototype.arm64_encoder import encode_program
 from prototype.pipeline import translate_bytes, translate_program
+from prototype.ppc_decoder import decode_word
+from prototype.cpu import CPUState
 
 
 def ppc_addi(rt, ra, immediate):
     return (
         (14 << 26) | (rt << 21) | (ra << 16)
         | (immediate & 0xFFFF)
+    )
+
+
+def ppc_mulld(rt, ra, rb, record=False):
+    return (
+        (31 << 26) | (rt << 21) | (ra << 16)
+        | (rb << 11) | (233 << 1) | int(record)
     )
 
 
@@ -85,6 +94,35 @@ class TranslationProgramTests(unittest.TestCase):
             with self.subTest(data=data):
                 with self.assertRaisesRegex(ValueError, "exactly 4 bytes"):
                     translate_bytes(data)
+
+    def test_mulld_decodes_executes_and_translates_to_arm64_mul(self):
+        instruction = ppc_mulld(5, 3, 4)
+        decoded = decode_word(instruction)
+        self.assertEqual(decoded["mnemonic"], "mulld")
+        self.assertEqual((decoded["rt"], decoded["ra"], decoded["rb"]), (5, 3, 4))
+
+        cpu = CPUState()
+        cpu.gpr[3] = 0xFFFFFFFFFFFFFFFF
+        cpu.gpr[4] = 3
+        cpu.execute(instruction)
+        self.assertEqual(cpu.gpr[5], 0xFFFFFFFFFFFFFFFD)
+        self.assertEqual(cpu.pc, 4)
+
+        translated = translate_program([instruction])
+        self.assertEqual(translated, ["    mul x5, x3, x4"])
+        machine_code = encode_program(translated)
+        self.assertEqual(len(machine_code), 4)
+        self.assertEqual(
+            int.from_bytes(machine_code, "little"),
+            0x9B047C65,
+        )
+
+    def test_mulld_record_form_is_rejected_until_cr_semantics_exist(self):
+        instruction = ppc_mulld(5, 3, 4, record=True)
+        with self.assertRaisesRegex(ValueError, "record form"):
+            translate_program([instruction])
+        with self.assertRaisesRegex(ValueError, "record form"):
+            CPUState().execute(instruction)
 
     def test_multiple_instructions_translate_and_encode_in_order(self):
         # r3 = 7; r4 = 19; r5 = r4 - r3 = 12.
