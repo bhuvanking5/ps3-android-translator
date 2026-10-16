@@ -33,10 +33,29 @@ typedef struct {
     uint8_t left_x, left_y, right_x, right_y;
 } ps3_controller_report;
 
+/* Stable 32-bit word layout for a future guest-memory/MMIO adapter. */
+typedef enum {
+    PS3_CONTROLLER_WORD_BUTTONS = 0,
+    PS3_CONTROLLER_WORD_LEFT_X = 1,
+    PS3_CONTROLLER_WORD_LEFT_Y = 2,
+    PS3_CONTROLLER_WORD_RIGHT_X = 3,
+    PS3_CONTROLLER_WORD_RIGHT_Y = 4,
+    PS3_CONTROLLER_WORD_COUNT = 5
+} ps3_controller_word_index;
+
+typedef enum {
+    PS3_CONTROLLER_WORD_OK = 0,
+    PS3_CONTROLLER_WORD_INVALID_ARGUMENT,
+    PS3_CONTROLLER_WORD_INVALID_INDEX
+} ps3_controller_word_status;
+
 void ps3_controller_input_publish(uint32_t pressed_mask,
     float left_x, float left_y, float right_x, float right_y);
 ps3_controller_input ps3_controller_input_read(void);
 ps3_controller_report ps3_controller_input_read_report(void);
+/* Reads one report field as a zero-extended 32-bit word. */
+ps3_controller_word_status ps3_controller_report_read_word(
+    const ps3_controller_report *report, uint32_t word_index, uint32_t *value);
 
 #ifdef __cplusplus
 }
