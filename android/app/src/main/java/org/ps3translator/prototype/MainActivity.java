@@ -442,8 +442,19 @@ public final class MainActivity extends Activity {
             try {
                 PkgMetadataInspector.Info info =
                     PkgMetadataInspector.inspect(getContentResolver(), uri);
-                final String report = PkgMetadataInspector.format(info);
-                runOnUiThread(() -> selectedGame.setText(report));
+                String report = PkgMetadataInspector.format(info);
+                if (info.type == 1 && info.revision == 0) {
+                    try {
+                        report += "\\n\\n" + PkgItemTableInspector.inspect(
+                            getContentResolver(), uri, info);
+                    } catch (java.io.IOException | SecurityException itemError) {
+                        report += "\\n\\nPlaintext item-table inspection stopped safely: "
+                            + itemError.getMessage()
+                            + "\\nNo payload was extracted, installed, or launched.";
+                    }
+                }
+                final String finalReport = report;
+                runOnUiThread(() -> selectedGame.setText(finalReport));
             } catch (java.io.IOException | SecurityException ex) {
                 runOnUiThread(() -> selectedGame.setText(
                     "PKG inspection stopped safely: " + ex.getMessage()
