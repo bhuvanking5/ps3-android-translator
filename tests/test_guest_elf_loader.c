@@ -286,7 +286,7 @@ int main(void) {
     /* Dynamic ELF must not enter the current native runner before relocations
        and imports are supported. Reject it before changing guest RAM or maps. */
     uint8_t dynamic_file[208] = {0};
-    memcpy(dynamic_file, "\\x7f""ELF", 4);
+    memcpy(dynamic_file, "\x7f""ELF", 4);
     dynamic_file[4] = 2u; dynamic_file[5] = 2u; dynamic_file[6] = 1u;
     put16(dynamic_file + 16, 2u); put16(dynamic_file + 18, 21u);
     put32(dynamic_file + 20, 1u);
@@ -306,23 +306,8 @@ int main(void) {
     put32(dynamic_file + 188, 0x4e800020u);
     memset(ram, 0xa5, sizeof(ram));
     ps3_guest_memory_init(&memory);
-    fprintf(stderr, "fixture type=%u class=%u data=%u machine=%u phoff=%llu phentsize=%u phnum=%u p0=%u p1=%u\\n",
-        (unsigned)((dynamic_file[16] << 8) | dynamic_file[17]),
-        (unsigned)dynamic_file[4], (unsigned)dynamic_file[5],
-        (unsigned)((dynamic_file[18] << 8) | dynamic_file[19]),
-        (unsigned long long)(((uint64_t)dynamic_file[32] << 56) | ((uint64_t)dynamic_file[33] << 48) |
-        ((uint64_t)dynamic_file[34] << 40) | ((uint64_t)dynamic_file[35] << 32) |
-        ((uint64_t)dynamic_file[36] << 24) | ((uint64_t)dynamic_file[37] << 16) |
-        ((uint64_t)dynamic_file[38] << 8) | dynamic_file[39]),
-        (unsigned)((dynamic_file[54] << 8) | dynamic_file[55]),
-        (unsigned)((dynamic_file[56] << 8) | dynamic_file[57]),
-        (unsigned)((dynamic_file[64] << 24) | (dynamic_file[65] << 16) | (dynamic_file[66] << 8) | dynamic_file[67]),
-        (unsigned)((dynamic_file[120] << 24) | (dynamic_file[121] << 16) | (dynamic_file[122] << 8) | dynamic_file[123]));
     ps3_guest_elf_status dynamic_status = ps3_guest_elf_load(dynamic_file,
         sizeof(dynamic_file), &memory, ram, 0x10000u, sizeof(ram), &entry);
-    if (dynamic_status != PS3_GUEST_ELF_RELOCATION_REQUIRED) {
-        fprintf(stderr, "dynamic ELF guard returned status %d\\n", (int)dynamic_status);
-    }
     CHECK(dynamic_status == PS3_GUEST_ELF_RELOCATION_REQUIRED);
     CHECK(memory.count == 0u);
     CHECK(ram[0] == 0xa5u && ram[15] == 0xa5u);
