@@ -19,6 +19,8 @@ typedef enum {
 /* Return nonzero on a successful 32-bit guest read, zero on an unmapped read. */
 typedef int (*ppc_cpu_read32_fn)(void *context, uint32_t address,
                                  uint32_t *value);
+typedef int (*ppc_cpu_write32_fn)(void *context, uint32_t address,
+                                  uint32_t value);
 
 /* Runs the bounded instruction subset without guest memory access. */
 ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
@@ -31,5 +33,11 @@ ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
 ppc_cpu_status ppc_cpu_run_with_read32(
     const uint32_t *instructions, size_t count, uint64_t registers[32],
     ppc_cpu_read32_fn read32, void *read_context);
+
+/* Guest loads/stores use callbacks; the interpreter never dereferences guest addresses. */
+ppc_cpu_status ppc_cpu_run_with_memory(
+    const uint32_t *instructions, size_t count, uint64_t registers[32],
+    ppc_cpu_read32_fn read32, ppc_cpu_write32_fn write32,
+    void *memory_context);
 
 #endif
