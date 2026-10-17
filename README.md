@@ -12,7 +12,7 @@ Experimental research project exploring translation of a **small subset of Power
 - A bounded C PowerPC-to-ARM64 translator for ADDI, ADD, SUBF, MULLD, register logical operations, and ORI/ORIS/XORI/XORIS immediate logical operations. It stores all 32 PowerPC GPRs in a stack-backed frame and uses ARM64 scratch registers for loads, operations, and stores.
 - An optional CPython extension API, `ps3_native.translate_and_execute_ppc(words, result_gpr)`, that accepts PowerPC instruction words, validates and translates the supported subset, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
 - A Python wrapper at `prototype/native_execution.py` for calling that optional native API.
-- An Android JNI smoke-test path that translates a fixed built-in PowerPC arithmetic program, executes the generated ARM64 words, and compares the result against the reference interpreter. It never accepts executable bytes from a selected game file.
+- An Android JNI smoke-test path that translates a fixed built-in PowerPC arithmetic program, executes the generated ARM64 words, and compares the result against the reference interpreter. Separately, the app now has an experimental, size-bounded path that loads a small unencrypted ELF64/PPC64 file into guest memory and interprets a limited PowerPC subset; this path does not translate selected game code to ARM64.
 - A virtual controller UI publishes button bits and normalized analog-stick axes into a native input mailbox, with host-side C tests for input range handling. This is an integration seam only; no PS3 emulation loop consumes it yet. The native adapter also exposes a generic report with button flags and 8-bit axes (0/128/255 = negative/center/positive), covered by host tests. A stable five-word adapter exposes button flags and each axis as zero-extended 32-bit values. A read-only guest-I/O adapter maps those fields at a synthetic prototype address range and rejects unaligned/out-of-range reads; these are test addresses, not real PS3 hardware registers. The bounded PowerPC interpreter supports callback-backed `lwz` and `stw` memory operations. A new bounded guest-memory module maps non-overlapping regions, enforces read/write permissions, rejects invalid or unaligned accesses, and reads/writes big-endian 32-bit words. Tests execute a tiny PowerPC program that stores a value to guest RAM and loads it back. This is a foundation for a future ELF loader, not yet a PS3 memory map or game loader.
 - CMake tests for translation encodings, native execution, and Python-binding input validation, plus Android APK build checks.
 - A Python basic-block planner that splits supported instruction sequences around relative unconditional branches, builds explicit successor edges, and rejects conditional, absolute, linked, or out-of-range control flow.
@@ -25,7 +25,7 @@ The ELF-to-CPU test uses a synthetic ELF with simple instructions. The native lo
 - The supported PowerPC instruction set is tiny and does not represent a complete PPU implementation. The current native execution API accepts only 1–256 32-bit instruction words and only the explicitly supported subset. `lwz` reads are permitted only through the supplied callback; unmapped reads fail explicitly.
 - Generated ARM64 execution requires an AArch64 process. On x86-64 hosts, tests verify translation, rejection behavior, and the unsupported-architecture response.
 - Full PowerPC condition-register behavior, broad branch handling, SPU emulation, PS3 memory/OS services, and RSX graphics are not implemented. Stack-backed GPR storage is implemented only for the supported straight-line instruction subset.
-- No PS3 title has booted in this project. The graphics demo activities are standalone prototypes, not PS3 rendering.
+- No PS3 title has booted in this project. The experimental Android ELF path is capped at a 32 MiB input file, uses a 64 MiB guest RAM window and a 1,024-step instruction budget, and may stop at unsupported instructions or guest-memory faults. PKG/SELF decryption, package installation, relocations/imports, stack/process setup, firmware services, SPU and RSX graphics are not implemented. The graphics demo activities are standalone prototypes, not PS3 rendering.
 
 ## Build and test
 
@@ -54,7 +54,7 @@ The CI workflow runs host tests, attempts the translated-code execution test on 
 
 ## Current priorities
 
-1. Confirm the new ELF-entry execution test, Android APK build, and native translation tests pass in CI.
+1. Validate the experimental Android selected-ELF path in CI, then test APK startup and the bounded ELF path on a real Android device.
 2. Expand PPU instruction semantics with tests and differential checks against a trusted reference.
 3. Add proper guest exceptions, stack/process setup, relocations, and imports before attempting real executable startup.
 4. Integrate the guest runner with a real memory map and a minimal runtime/system-call layer.
