@@ -18,8 +18,8 @@ typedef enum {
 
 /*
  * Load an unencrypted, big-endian ELF64 PowerPC64 executable into caller-owned
- * guest RAM. This maps PT_LOAD segments only; it does not handle PS3 SELF
- * decryption, relocations, imports, firmware, or process/OS setup.
+ * guest RAM. It handles a narrow symbol-zero RELA subset for ET_EXEC only.
+ * It does not handle PS3 SELF decryption, imports, firmware, or process/OS setup.
  * Addresses above 32 bits are rejected by this prototype memory model. A narrow
  * PT_DYNAMIC subset is supported only for ET_EXEC files with symbol-zero
  * R_PPC64_ADDR32 / R_PPC64_REL32 RELA entries. ET_DYN, imports, other relocation
