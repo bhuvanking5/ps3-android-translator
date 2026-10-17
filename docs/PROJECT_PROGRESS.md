@@ -40,7 +40,7 @@ Next engineering milestones:
 
 ## Android ELF launch-pipeline test (2026-10-17)
 
-The Android UI now has a **Run built-in ELF execution test** button. It synthesizes a tiny, unencrypted ELF64 big-endian PowerPC64 executable in the native bridge and routes it through the same ELF loader and bounded guest interpreter used by the selected-ELF path. The test sets r3=7, r4=5, computes r5=12, and then stops at the runner's instruction budget. The status line includes the resulting registers.
+The Android UI now has a **Run built-in ELF execution test** button. It synthesizes a tiny, unencrypted ELF64 big-endian PowerPC64 executable in the native bridge and routes it through the same ELF loader and bounded guest interpreter used by the selected-ELF path. The test sets r3=7, r4=5, computes r5=12, then uses the exact `blr` instruction as a prototype top-level return sentinel. The status line reports a clean guest exit and resulting registers.
 
 This is a useful device-side smoke test for the JNI → ELF loader → guest memory → PowerPC interpreter path. It is **not a PS3 game**, and reaching the step limit is expected for this fixture's intentional self-branch. The selected-file path is limited to raw ELF files no larger than 32 MiB, and the current guest RAM window is 64 MiB. PKG extraction/installation, SELF decryption, dynamic linking, process/stack setup, system services, SPU, and RSX remain missing. No real PS3 game has booted.
 
@@ -88,3 +88,8 @@ CI for the earlier container-signature commit completed successfully: host C/Pyt
 tests, ARM64 translated-code execution, Android ARM64 native bridge compilation,
 debug APK build, and APK native-bridge verification all passed. The new ISO parser
 and its tests still require CI validation on the latest commit.
+
+
+## Explicit top-level return contract (2026-10-17)
+
+The bounded guest runner now recognizes the exact PowerPC `blr` instruction (`0x4E800020`) as a clean top-level return to a synthetic host sentinel. The tiny ELF fixture uses this instead of an intentional self-branch, and the Android status reports a clean guest exit with GPR values. This is deliberately narrow: general link-register state, nested calls/returns, syscall handling, and a full PS3 process ABI are still unsupported. The contract improves the synthetic test harness; it does not demonstrate game compatibility.
