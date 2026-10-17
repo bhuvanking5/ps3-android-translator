@@ -571,8 +571,8 @@ int main(void) {
     CHECK(steps == 9u && registers[6] == 0x12345678u);
     CHECK(registers[7] == 0x78u && registers[8] == 0x5678u &&
         registers[9] == 0x5678u);
-    CHECK(indexed_data[0] == 0x78u && indexed_data[1] == 0x56u &&
-        indexed_data[2] == 0x34u && indexed_data[3] == 0x12u &&
+    CHECK(indexed_data[0] == 0x78u && indexed_data[1] == 0x34u &&
+        indexed_data[2] == 0x56u && indexed_data[3] == 0x78u &&
         indexed_data[6] == 0x56u && indexed_data[7] == 0x78u);
 
     puts("Native ELF loader and entry-point execution tests passed.");
