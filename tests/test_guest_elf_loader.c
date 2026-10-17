@@ -289,6 +289,35 @@ int main(void) {
     CHECK(registers[6] == UINT64_C(0x12345678abcdef01) && registers[4] == 0x9008u);
     CHECK(doubleword_data[0] == 0x12u && doubleword_data[7] == 0x01u);
 
+    /* Byte/halfword loads and stores preserve big-endian order and sign-extend LHA. */
+    uint8_t narrow_memory_code[40] = {0};
+    uint8_t narrow_data[16] = {0};
+    put32(narrow_memory_code + 0, (44u << 26) | (3u << 21) | (4u << 16)); /* sth r3,0(r4) */
+    put32(narrow_memory_code + 4, (40u << 26) | (5u << 21) | (4u << 16)); /* lhz r5,0(r4) */
+    put32(narrow_memory_code + 8, (42u << 26) | (6u << 21) | (4u << 16)); /* lha r6,0(r4) */
+    put32(narrow_memory_code + 12, (38u << 26) | (3u << 21) | (4u << 16) | 2u); /* stb r3,2(r4) */
+    put32(narrow_memory_code + 16, (34u << 26) | (7u << 21) | (4u << 16) | 2u); /* lbz r7,2(r4) */
+    put32(narrow_memory_code + 20, 0x3860ffffu); /* addi r3,0,-1 */
+    put32(narrow_memory_code + 24, (44u << 26) | (3u << 21) | (4u << 16) | 4u); /* sth r3,4(r4) */
+    put32(narrow_memory_code + 28, (42u << 26) | (8u << 21) | (4u << 16) | 4u); /* lha r8,4(r4) */
+    put32(narrow_memory_code + 32, (40u << 26) | (9u << 21) | (4u << 16) | 4u); /* lhz r9,4(r4) */
+    put32(narrow_memory_code + 36, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5400u, sizeof(narrow_memory_code),
+        narrow_memory_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    CHECK(ps3_guest_memory_map(&memory, 0xa000u, sizeof(narrow_data), narrow_data,
+        PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_WRITE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = 0x1234u;
+    registers[4] = 0xa000u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5400u, registers, 12u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 10u && registers[5] == 0x1234u && registers[6] == 0x1234u);
+    CHECK(registers[7] == 0x34u && registers[8] == UINT64_MAX && registers[9] == 0xffffu);
+    CHECK(narrow_data[0] == 0x12u && narrow_data[1] == 0x34u &&
+        narrow_data[2] == 0x34u && narrow_data[4] == 0xffu && narrow_data[5] == 0xffu);
+
     /* Fetching from unmapped/non-executable memory must fail safely. */
     ps3_guest_memory_init(&memory);
     steps = 99u;
