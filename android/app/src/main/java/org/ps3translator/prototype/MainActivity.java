@@ -470,7 +470,7 @@ public final class MainActivity extends Activity {
                 }
                 if (result.size > 32L * 1024 * 1024) {
                     runOnUiThread(() -> selectedGame.setText(
-                        "Found " + result.path + "\\nSize: " + result.size
+                        "Found " + result.path + "\nSize: " + result.size
                         + " bytes. It exceeds the prototype's 32 MiB executable limit; "
                         + "no file was loaded and no game was launched."));
                     return;
@@ -488,16 +488,16 @@ public final class MainActivity extends Activity {
                             + result.path + ". Trying the bounded experimental interpreter…"));
                         final String runResult = nativeRunSelectedElf(executable);
                         runOnUiThread(() -> selectedGame.setText(
-                            "ISO executable discovery: " + result.path + "\\n"
-                            + "File size: " + result.size + " bytes\\n"
-                            + "Interpreter result:\\n" + runResult
-                            + "\\nThis is not a full PS3 game boot: firmware, imports, "
+                            "ISO executable discovery: " + result.path + "\n"
+                            + "File size: " + result.size + " bytes\n"
+                            + "Interpreter result:\n" + runResult
+                            + "\nThis is not a full PS3 game boot: firmware, imports, "
                             + "SPU and RSX are not implemented."));
                     } else {
                         runOnUiThread(() -> selectedGame.setText(
                             "Found EBOOT.BIN, but its ELF header is not the supported "
                             + "ELF64 big-endian PPC64 format. Path: " + result.path
-                            + "\\nGame was NOT launched."));
+                            + "\nGame was NOT launched."));
                     }
                 } else if (executable.length >= 4 && executable[0] == 'S'
                         && executable[1] == 'C' && executable[2] == 'E'
@@ -514,7 +514,7 @@ public final class MainActivity extends Activity {
             } catch (java.io.IOException | SecurityException ex) {
                 runOnUiThread(() -> selectedGame.setText(
                     "ISO inspection stopped safely: " + ex.getMessage()
-                    + "\\nNo executable was launched."));
+                    + "\nNo executable was launched."));
             } catch (RuntimeException ex) {
                 runOnUiThread(() -> selectedGame.setText(
                     "ISO inspection failed safely (" + ex.getClass().getSimpleName()
