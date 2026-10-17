@@ -101,9 +101,11 @@ final class Iso9660Locator {
 
     private Result find() throws IOException {
         if (imageSize < 17L * SECTOR) throw new IOException("Image is too small for ISO 9660.");
-        byte[] descriptors = readAt(16L * SECTOR, MAX_DESCRIPTORS * SECTOR);
+        int descriptorCount = (int) Math.min(MAX_DESCRIPTORS,
+            (imageSize - 16L * SECTOR) / SECTOR);
+        byte[] descriptors = readAt(16L * SECTOR, descriptorCount * SECTOR);
         byte[] pvd = null;
-        for (int i = 0; i < MAX_DESCRIPTORS; i++) {
+        for (int i = 0; i < descriptorCount; i++) {
             int at = i * SECTOR;
             if (!asciiEquals(descriptors, at + 1, "CD001") || (descriptors[at + 6] & 0xff) != 1) continue;
             int type = descriptors[at] & 0xff;
