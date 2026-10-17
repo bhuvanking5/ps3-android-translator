@@ -17,7 +17,7 @@ Experimental research project exploring translation of a **small subset of Power
 - CMake tests for translation encodings, native execution, and Python-binding input validation, plus Android APK build checks.
 - A Python basic-block planner that splits supported instruction sequences around relative unconditional branches, builds explicit successor edges, and rejects conditional, absolute, linked, or out-of-range control flow.
 
-The ELF-to-CPU test uses a synthetic ELF with simple instructions. The native loader currently maps PT_LOAD segments but does not execute from the ELF entry point. These tests validate a narrow prototype path only; they do not demonstrate compatibility with a real PS3 executable.
+The ELF-to-CPU test uses a synthetic ELF with simple instructions. The native loader now maps PT_LOAD segments and the bounded guest runner can fetch and execute the supported instruction subset from the ELF entry point. This is still a synthetic ELF test, not compatibility with a real PS3 executable. These tests validate a narrow prototype path only; they do not demonstrate compatibility with a real PS3 executable.
 
 ## Important limitations
 
@@ -54,12 +54,11 @@ The CI workflow runs host tests, attempts the translated-code execution test on 
 
 ## Current priorities
 
-1. Confirm bounded guest-memory/load-store tests, Android APK build, and native translation tests pass in CI.
-2. Build a bounded native ELF64/PowerPC64 PT_LOAD mapper that copies segments into guest memory and validates entry points.
-3. Run the bounded translated-code test on an AArch64 CI runner and on an actual ARM64 Android device.
-4. Connect the Python translator's instruction semantics to the native translator with shared differential tests.
-5. Extend CPU control flow and instruction coverage only after semantics and differential tests are defined.
-6. Build out the much larger PPU/SPU, memory, OS, and graphics requirements needed by a real emulator.
+1. Confirm the new ELF-entry execution test, Android APK build, and native translation tests pass in CI.
+2. Expand PPU instruction semantics with tests and differential checks against a trusted reference.
+3. Add proper guest exceptions, stack/process setup, relocations, and imports before attempting real executable startup.
+4. Integrate the guest runner with a real memory map and a minimal runtime/system-call layer.
+5. Build out the much larger PPU/SPU, memory, OS, and RSX graphics requirements needed by a real emulator.
 
 See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md).
 
@@ -73,4 +72,4 @@ A successful build proves that the prototype compiles and its tests pass; it doe
 
 ## Next practical milestone
 
-Verify the Python native binding and translated-code test on an AArch64 runner, then run the smoke test on a physical ARM64 Android device. Keep unsupported instructions rejected explicitly. Full PS3 game support remains a much larger project requiring CPU, SPU, memory, operating-system, and graphics emulation.
+The guest runner can now fetch big-endian instructions only from mapped executable regions, start at a supplied entry point, execute a bounded subset, and stop safely on unsupported instructions, invalid memory, or the step limit. The synthetic integration test loads an ELF, starts at its entry point, and verifies a register result. Next, expand instruction coverage and process/runtime setup. Keep unsupported instructions rejected explicitly. Full PS3 game support remains a much larger project requiring CPU, SPU, memory, operating-system, and graphics emulation.
