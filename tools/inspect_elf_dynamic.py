@@ -260,7 +260,15 @@ def main() -> int:
                 f"{table_name} entry: offset=0x{relocation['offset']:x} "
                 f"symbol={relocation['symbol_index']} type={relocation['type']} "
                 f"addend={relocation['addend']}"
+                + (f" name={relocation['symbol']}" if "symbol" in relocation else "")
+                + (" [undefined import]" if relocation.get("undefined_import") else "")
             )
+    for index, symbol in result["referenced_symbols"].items():
+        print(
+            f"Symbol {index}: {symbol['name'] or '<anonymous>'} "
+            f"binding={symbol['binding']} type={symbol['type']} "
+            f"section={symbol['section_index']}"
+        )
     print(result["limitations"])
     return 0
 
