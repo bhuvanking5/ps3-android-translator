@@ -52,7 +52,7 @@ def make_dynamic_elf():
     ]
     for i, (tag, value) in enumerate(entries):
         struct.pack_into(">qQ", data, 0x100 + i * 16, tag, value)
-    data[0x180:0x18D] = b"\0libc_stub.so\0"
+    data[0x180:0x18E] = b"\0libc_stub.so\0"
     return data
 
 
