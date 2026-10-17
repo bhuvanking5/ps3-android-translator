@@ -424,16 +424,85 @@ public final class MainActivity extends Activity {
                 + "is not implemented, so this file cannot be launched.");
         } else {
             String discKind = detectDiscContainer(uri);
-            if (discKind != null) {
-                selectedGame.setText(discKind + " disc signature detected. This is only a signature "
-                    + "check; disc filesystem traversal, executable discovery, and the PS3 runtime "
-                    + "are not implemented. Game was NOT launched.");
+            if ("ISO 9660".equals(discKind)) {
+                inspectIsoImage(uri);
+            } else if ("UDF".equals(discKind)) {
+                selectedGame.setText("UDF disc signature detected. This build's directory walker "
+                    + "supports ISO 9660 only; UDF traversal and PS3 game boot are not implemented. "
+                    + "Game was NOT launched.");
             } else {
                 selectedGame.setText("No supported executable/container signature detected in the "
-                    + "checked locations. ISO/UDF directory parsing and PKG extraction are not "
-                    + "implemented. Game was NOT launched.");
+                    + "checked locations. PKG extraction and UDF traversal are not implemented. "
+                    + "Game was NOT launched.");
             }
         }
+    }
+
+    private void inspectIsoImage(Uri uri) {
+        selectedGame.setText("ISO 9660 detected. Searching safely for PS3_GAME/USRDIR/EBOOT.BIN…");
+        new Thread(() -> {
+            try {
+                Iso9660Locator.Result result = Iso9660Locator.findEboot(getContentResolver(), uri);
+                if (result == null) {
+                    runOnUiThread(() -> selectedGame.setText(
+                        "ISO 9660 directory traversal completed, but PS3_GAME/USRDIR/EBOOT.BIN "
+                        + "was not found. This may be a non-PS3 ISO, a UDF/Joliet layout, or an "
+                        + "unsupported directory structure. Game was NOT launched."));
+                    return;
+                }
+                if (result.size > 32L * 1024 * 1024) {
+                    runOnUiThread(() -> selectedGame.setText(
+                        "Found " + result.path + "\\nSize: " + result.size
+                        + " bytes. It exceeds the prototype's 32 MiB executable limit; "
+                        + "no file was loaded and no game was launched."));
+                    return;
+                }
+                byte[] executable = Iso9660Locator.readEbootForRun(
+                    getContentResolver(), uri, result);
+                if (executable.length >= 4 && executable[0] == 0x7f
+                        && executable[1] == 'E' && executable[2] == 'L'
+                        && executable[3] == 'F') {
+                    if (executable.length >= 20 && executable[4] == 2
+                            && executable[5] == 2 && executable[18] == 0
+                            && executable[19] == 21) {
+                        runOnUiThread(() -> selectedGame.setText(
+                            "Found an ELF64 big-endian PPC64 EBOOT.BIN at "
+                            + result.path + ". Trying the bounded experimental interpreter…"));
+                        final String runResult = nativeRunSelectedElf(executable);
+                        runOnUiThread(() -> selectedGame.setText(
+                            "ISO executable discovery: " + result.path + "\\n"
+                            + "File size: " + result.size + " bytes\\n"
+                            + "Interpreter result:\\n" + runResult
+                            + "\\nThis is not a full PS3 game boot: firmware, imports, "
+                            + "SPU and RSX are not implemented."));
+                    } else {
+                        runOnUiThread(() -> selectedGame.setText(
+                            "Found EBOOT.BIN, but its ELF header is not the supported "
+                            + "ELF64 big-endian PPC64 format. Path: " + result.path
+                            + "\\nGame was NOT launched."));
+                    }
+                } else if (executable.length >= 4 && executable[0] == 'S'
+                        && executable[1] == 'C' && executable[2] == 'E'
+                        && executable[3] == 0) {
+                    runOnUiThread(() -> selectedGame.setText(
+                        "Found " + result.path + " (" + result.size + " bytes), but it has "
+                        + "a SELF-style signature. Protected SELF execution is not implemented; "
+                        + "the game was NOT launched."));
+                } else {
+                    runOnUiThread(() -> selectedGame.setText(
+                        "Found " + result.path + ", but the file is not a recognized ELF or "
+                        + "SELF executable. Game was NOT launched."));
+                }
+            } catch (java.io.IOException | SecurityException ex) {
+                runOnUiThread(() -> selectedGame.setText(
+                    "ISO inspection stopped safely: " + ex.getMessage()
+                    + "\\nNo executable was launched."));
+            } catch (RuntimeException ex) {
+                runOnUiThread(() -> selectedGame.setText(
+                    "ISO inspection failed safely (" + ex.getClass().getSimpleName()
+                    + "). No executable was launched."));
+            }
+        }, "ps3-iso-eboot-discovery").start();
     }
 
     /**
