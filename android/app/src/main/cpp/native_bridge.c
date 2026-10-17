@@ -136,11 +136,30 @@ Java_org_ps3translator_prototype_MainActivity_nativeRunSelectedElf(
         return (*env)->NewStringUTF(env, "This file is not a supported unencrypted big-endian ELF64 PowerPC64 executable. PKG/SELF games cannot launch yet.");
     }
 
+    /*
+     * Provide a bounded, writable initial stack for simple static ELF fixtures.
+     * This is not the full PS3 ABI: argc/argv, auxv, TLS, imports and syscalls
+     * are still absent. Keep the stack in a reserved top-of-RAM window and
+     * refuse to overlap any loaded PT_LOAD segment.
+     */
+    const uint32_t stack_size = 1024u * 1024u;
+    const uint32_t stack_base = 63u * 1024u * 1024u;
+    const uint32_t stack_top = stack_base + stack_size;
+    if (!ps3_guest_memory_map(&memory, stack_base, stack_size,
+            ram + stack_base, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_WRITE)) {
+        free(file);
+        free(ram);
+        return (*env)->NewStringUTF(env,
+            "ELF segments overlap the reserved 1 MiB startup stack window. "
+            "This prototype cannot construct a safe initial guest stack.");
+    }
+
     uint64_t gpr[32] = {0};
+    gpr[1] = (uint64_t)(stack_top & ~15u); /* PPC ABI stack pointer, 16-byte aligned */
     size_t steps = 0u;
     const ppc_cpu_status run_status = ppc_cpu_run_guest(
         &memory, entry, gpr, 1024u, &steps);
-    char message[256];
+    char message[320];
     if (run_status == PPC_CPU_UNSUPPORTED_INSTRUCTION) {
         (void)snprintf(message, sizeof(message),
             "ELF loaded at 0x%08x; interpreter ran %zu step(s), then hit an unsupported PowerPC instruction. r3=0x%llx. This is a launch-pipeline test, not a booted PS3 game.",
