@@ -21,11 +21,16 @@ static uint16_t b16(const uint8_t*p){return (uint16_t)(((uint16_t)p[0]<<8)|p[1])
 static uint32_t b32(const uint8_t*p){return ((uint32_t)p[0]<<24)|((uint32_t)p[1]<<16)|((uint32_t)p[2]<<8)|p[3];}
 static uint64_t b64(const uint8_t*p){return ((uint64_t)b32(p)<<32)|b32(p+4);}
 static int range_ok(size_t n,uint64_t o,uint64_t l){return o<=(uint64_t)n&&l<=(uint64_t)n-o;}
-static int v2f(const seg*s,size_t n,uint64_t va,uint64_t len,uint64_t*out){
- for(size_t i=0;i<n;i++) if(va>=s[i].va&&va-s[i].va<=s[i].fs&&len<=s[i].fs-(va-s[i].va)){
-  if(s[i].off>UINT64_MAX-(va-s[i].va))return 0;
-  *out=s[i].off+(va-s[i].va);return 1;
- } return 0;
+static int v2f(const seg *s, size_t n, uint64_t va, uint64_t len, uint64_t *out) {
+    for (size_t i = 0; i < n; ++i) {
+        if (va >= s[i].va && va - s[i].va <= s[i].fs &&
+            len <= s[i].fs - (va - s[i].va)) {
+            if (s[i].off > UINT64_MAX - (va - s[i].va)) return 0;
+            *out = s[i].off + (va - s[i].va);
+            return 1;
+        }
+    }
+    return 0;
 }
 ps3_guest_dynamic_status ps3_guest_elf_parse_rela(const uint8_t*f,size_t n,ps3_guest_relocation*out,size_t cap,size_t*count){
  if(!f||!out||!count||n<EH||cap>PS3_GUEST_ELF_DYNAMIC_MAX_RELOCS)return PS3_GUEST_DYNAMIC_INVALID_ARGUMENT;
