@@ -20,6 +20,9 @@ static uint32_t branch(int displacement, unsigned absolute, unsigned link) {
 static uint32_t andi(unsigned rs, unsigned ra, unsigned imm) {
     return (28u << 26) | (rs << 21) | (ra << 16) | (imm & 0xffffu);
 }
+static uint32_t logical_imm(unsigned opcode, unsigned rs, unsigned ra, unsigned imm) {
+    return (opcode << 26) | (rs << 21) | (ra << 16) | (imm & 0xffffu);
+}
 static uint32_t cmpwi(unsigned bf, unsigned ra, int imm) {
     return (11u << 26) | (bf << 23) | (ra << 16) |
            ((uint32_t)imm & 0xffffu);
@@ -54,6 +57,15 @@ int main(void) {
     };
     CHECK(ppc_cpu_run(logical, 5, gpr) == PPC_CPU_OK);
     CHECK(gpr[5] == 8u && gpr[6] == 6u && gpr[7] == 14u);
+
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t shifted_logical[] = {
+        addi(3, 0, 0x1234), logical_imm(25, 3, 4, 0xABCD),
+        logical_imm(27, 4, 5, 0x00FF)
+    };
+    CHECK(ppc_cpu_run(shifted_logical, 3, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 0xABCD1234u);
+    CHECK(gpr[5] == (0xABCD1234u ^ 0x00FF0000u));
 
     memset(gpr, 0, sizeof(gpr));
     const uint32_t mulli_program[] = {
