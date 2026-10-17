@@ -11,7 +11,7 @@ It contains four PowerPC instructions: set GPR3 to 7, set GPR4 to 5, add them in
 Run the fixture-generator checks with:
 
 ~~~sh
-python -m unittest tests/test_tiny_ps3_elf.py -v
+python -m unittest discover -s tests -p 'test_tiny_ps3_elf.py' -v
 ~~~
 
 This file is a test fixture for the experimental native loader/runner. It is **not a PS3 game**, and the current Android UI does not yet execute a selected ELF end-to-end. PS3 SELF decryption, relocations/imports, OS services, SPU emulation, and RSX graphics are not implemented.
