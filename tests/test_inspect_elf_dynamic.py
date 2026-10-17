@@ -55,7 +55,7 @@ def make_dynamic_elf():
     ]
     for i, (tag, value) in enumerate(entries):
         struct.pack_into(">qQ", data, 0x100 + i * 16, tag, value)
-    data[0x180:0x18E] = b"\0libc_stub.so\0"
+    data[0x1A0:0x1AE] = b"\0libc_stub.so\0"
     # One big-endian Elf64_Rela: target 0x2000, symbol 3, type 22, addend -4.
     struct.pack_into(">QQq", data, 0x1C0, 0x2000, (3 << 32) | 22, -4)
     # Dynamic symbol 3 is an undefined imported function named libc_stub.so.
