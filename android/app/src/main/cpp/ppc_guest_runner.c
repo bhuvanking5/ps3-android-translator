@@ -116,7 +116,7 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             }
             const unsigned xo = (ins >> 1) & 0x3ffu;
-            const unsigned spr = (((ins >> 16) & 31u) << 5) | ((ins >> 11) & 31u);
+            const unsigned spr = (((ins >> 11) & 31u) << 5) | ((ins >> 16) & 31u);
             if (xo == 339u && spr == 8u) registers[rt] = lr;       /* mflr */
             else if (xo == 467u && spr == 8u) lr = registers[rt]; /* mtlr */
             else if (xo == 266u) registers[rt] = registers[ra] + registers[rb];
