@@ -84,6 +84,20 @@ class CPUTests(unittest.TestCase):
 
         self.assertEqual(cpu.gpr[3], 6)
 
+    def test_addis_signed_immediate_shift(self):
+        cpu = CPUState()
+        cpu.gpr[4] = 0x100000
+        addis = (15 << 26) | (3 << 21) | (4 << 16) | 0xFFFE
+        cpu.execute(addis)
+        self.assertEqual(cpu.gpr[3], 0x100000 - (2 << 16))
+        self.assertEqual(cpu.pc, 4)
+
+    def test_addis_ra_zero_uses_zero_base(self):
+        cpu = CPUState()
+        addis = (15 << 26) | (3 << 21) | 0x1234
+        cpu.execute(addis)
+        self.assertEqual(cpu.gpr[3], 0x12340000)
+
     def test_oris_and_xoris_shift_immediate_into_high_half(self):
         cpu = CPUState()
         cpu.gpr[3] = 0x1234
