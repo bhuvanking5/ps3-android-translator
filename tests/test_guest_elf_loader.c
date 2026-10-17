@@ -18,7 +18,7 @@ static void put64(uint8_t *p, uint64_t v) {
 }
 
 int main(void) {
-    uint8_t file[144] = {0};
+    uint8_t file[152] = {0};
     uint8_t ram[64];
     memset(ram, 0xa5, sizeof(ram));
     ps3_guest_memory memory;
@@ -36,14 +36,17 @@ int main(void) {
     put64(file + 72, 120u);
     put64(file + 80, 0x1000u);
     put64(file + 88, 0x1000u);
-    put64(file + 96, 20u);
-    put64(file + 104, 24u);
+    put64(file + 96, 32u);
+    put64(file + 104, 36u);
     put64(file + 112, 4u);
     put32(file + 120, 0x38600007u); /* addi r3,0,7 */
     put32(file + 124, 0x38802000u); /* addi r4,0,0x2000 */
     put32(file + 128, 0x90640000u); /* stw r3,0(r4) */
     put32(file + 132, 0x80a40000u); /* lwz r5,0(r4) */
-    put32(file + 136, 0x48000000u); /* b . */
+    put32(file + 136, 0x2c050007u); /* cmpwi cr0,r5,7 */
+    put32(file + 140, 0x41820008u); /* beq cr0,+8: skip next instruction */
+    put32(file + 144, 0x38c00063u); /* addi r6,0,99 (must be skipped) */
+    put32(file + 148, 0x48000000u); /* b . */
 
 
     CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
@@ -52,10 +55,10 @@ int main(void) {
     CHECK(memory.count == 1u);
     CHECK(ram[0] == 0x38u && ram[1] == 0x60u &&
           ram[2] == 0x00u && ram[3] == 0x07u);
-    CHECK(ram[16] == 0x48u && ram[17] == 0u &&
-          ram[18] == 0u && ram[19] == 0u);
-    CHECK(ram[20] == 0u && ram[21] == 0u &&
-          ram[22] == 0u && ram[23] == 0u);
+    CHECK(ram[28] == 0x48u && ram[29] == 0u &&
+          ram[30] == 0u && ram[31] == 0u);
+    CHECK(ram[32] == 0u && ram[33] == 0u &&
+          ram[34] == 0u && ram[35] == 0u);
     uint32_t word = 0u;
     CHECK(ps3_guest_memory_read32(&memory, 0x1000u, &word));
     CHECK(word == 0x38600007u);
@@ -70,6 +73,7 @@ int main(void) {
     CHECK(steps == 8u);
     CHECK(registers[3] == 7u);
     CHECK(registers[5] == 7u);
+    CHECK(registers[6] == 0u); /* conditional branch skipped addi r6,0,99 */
     CHECK(data[0] == 0u && data[1] == 0u &&
           data[2] == 0u && data[3] == 7u);
 
