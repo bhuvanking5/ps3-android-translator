@@ -15,7 +15,7 @@ static int resolve_foo(const char *name, uint64_t *value, void *context) {
 }
 int main(void) {
     uint8_t f[448] = {0};
-    memcpy(f, "\\x7f" "ELF", 4u);
+    memcpy(f, "\x7f" "ELF", 4u);
     f[4] = 2; f[5] = 2; f[6] = 1;
     p16(f + 16, 2); p16(f + 18, 21); p32(f + 20, 1);
     p64(f + 32, 64); p16(f + 52, 64); p16(f + 54, 56); p16(f + 56, 2);
@@ -38,8 +38,7 @@ int main(void) {
 
     ps3_guest_relocation out[4];
     size_t n = 99;
-    ps3_guest_dynamic_status initial_status = ps3_guest_elf_parse_rela(f, sizeof(f), out, 4, &n, 0, 0);
-    if (initial_status != PS3_GUEST_DYNAMIC_OK) { fprintf(stderr, "initial parser status=%d\n", (int)initial_status); return 1; }
+    CHECK(ps3_guest_elf_parse_rela(f, sizeof(f), out, 4, &n, 0, 0) == PS3_GUEST_DYNAMIC_OK);
     CHECK(n == 2);
     CHECK(out[0].type == PS3_PPC64_R_ADDR32 && out[0].target_address == 0x1080 &&
           out[0].symbol_value == 0x1010 && out[0].addend == 0x20);
