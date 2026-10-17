@@ -19,3 +19,14 @@ dynamic linker. It does not calculate load bias, resolve imports, implement
 TOC/function-descriptor conventions, support the broad PPC64 relocation set,
 or handle SELF/PKG. Passing unit tests would demonstrate only these isolated
 arithmetic/write semantics, not executable or game compatibility.
+
+
+## Relocation-list stage
+
+The helper now also accepts decoded RELA records plus a caller-provided symbol
+table. It applies ET_EXEC records with zero load bias or ET_DYN records with an
+explicit load bias, and stages the entire list in a copy before committing.
+An undefined symbol requires an explicit resolver callback; without one the
+operation fails instead of inventing an address. This is still a host-side
+helper and is not wired into the native/Android loader. The callback is only a
+mechanism for future testing, not a PS3 firmware import resolver.
