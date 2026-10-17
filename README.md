@@ -17,7 +17,7 @@ Experimental research project exploring translation of a **small subset of Power
 - CMake tests for translation encodings, native execution, and Python-binding input validation, plus Android APK build checks.
 - A Python basic-block planner that splits supported instruction sequences around relative unconditional branches, builds explicit successor edges, and rejects conditional, absolute, linked, or out-of-range control flow.
 
-The ELF-to-CPU test uses a synthetic ELF with simple instructions. The native loader now maps PT_LOAD segments and the bounded guest runner can fetch and execute the supported instruction subset from the ELF entry point. This is still a synthetic ELF test, not compatibility with a real PS3 executable. These tests validate a narrow prototype path only; they do not demonstrate compatibility with a real PS3 executable.
+The ELF-to-CPU test uses a synthetic ELF with simple instructions. The native loader maps PT_LOAD segments and the bounded guest runner can fetch and execute the supported instruction subset from the ELF entry point. The tiny fixture now finishes through a narrow prototype top-level `blr` return contract; general link-register behavior and nested calls remain unsupported. This is still a synthetic ELF test, not compatibility with a real PS3 executable. These tests validate a narrow prototype path only; they do not demonstrate compatibility with a real PS3 executable.
 
 ## Important limitations
 
