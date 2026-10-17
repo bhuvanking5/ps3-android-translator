@@ -89,6 +89,11 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
                                        (opcode == 25u ? 16u : 0u);
             registers[ra] = registers[rt] | immediate;
+        } else if (opcode == 28u) {
+            /* ANDI. always updates CR0; a 16-bit mask gives EQ or GT, never LT. */
+            const uint64_t value = registers[rt] & (uint64_t)(ins & 0xffffu);
+            registers[ra] = value;
+            condition[0] = value == 0u ? 2u : 4u;
         } else if (opcode == 26u || opcode == 27u) {
             const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
                                        (opcode == 27u ? 16u : 0u);
