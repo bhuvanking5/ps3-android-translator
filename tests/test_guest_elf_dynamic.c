@@ -21,6 +21,7 @@ int main(void){
  p64(f+248,999u);CHECK(ps3_guest_elf_parse_rela(f,sizeof(f),out,4,&n)==PS3_GUEST_DYNAMIC_UNSUPPORTED);
  p64(f+248,1);p64(f+240,0x2000);CHECK(ps3_guest_elf_parse_rela(f,sizeof(f),out,4,&n)==PS3_GUEST_DYNAMIC_OUT_OF_BOUNDS);
  p64(f+240,0x1080);p64(f+224,1);CHECK(ps3_guest_elf_parse_rela(f,sizeof(f),out,4,&n)==PS3_GUEST_DYNAMIC_BAD_FORMAT);
+ p64(f+224,0);p64(f+136,0x2000);CHECK(ps3_guest_elf_parse_rela(f,sizeof(f),out,4,&n)==PS3_GUEST_DYNAMIC_BAD_FORMAT);
  CHECK(ps3_guest_elf_parse_rela(0,sizeof(f),out,4,&n)==PS3_GUEST_DYNAMIC_INVALID_ARGUMENT);
  puts("Native dynamic RELA parser tests passed.");return 0;
 }
