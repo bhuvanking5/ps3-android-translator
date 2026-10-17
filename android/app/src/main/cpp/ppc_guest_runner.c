@@ -245,6 +245,18 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
                 registers[ra] = (uint64_t)result;
             }
             else if (xo == 316u) registers[ra] = registers[rt] ^ registers[rb];
+            else if (xo == 986u && rb == 0u) {
+                /* EXTSW sign-extends the low 32-bit word to the PPC64 GPR. */
+                registers[ra] = (uint64_t)(int64_t)(int32_t)(uint32_t)registers[rt];
+            }
+            else if (xo == 26u && rb == 0u) {
+                /* CNTLZW counts leading zero bits in the low 32-bit word. */
+                uint32_t value = (uint32_t)registers[rt];
+                unsigned count = 0u;
+                while (count < 32u && (value & (UINT32_C(1) << (31u - count))) == 0u)
+                    ++count;
+                registers[ra] = count;
+            }
             else if (xo == 23u || xo == 55u || xo == 87u || xo == 119u ||
                      xo == 151u || xo == 183u || xo == 215u || xo == 247u ||
                      xo == 279u || xo == 311u || xo == 343u || xo == 375u ||
