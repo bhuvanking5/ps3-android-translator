@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "guest_elf_loader.h"
+#include "ppc_cpu.h"
 
 #define CHECK(condition) do { \
     if (!(condition)) { \
@@ -22,7 +23,7 @@ static void put64(uint8_t *p, uint64_t v) {
 }
 
 int main(void) {
-    uint8_t file[124] = {0};
+    uint8_t file[128] = {0};
     uint8_t ram[64];
     memset(ram, 0xa5, sizeof(ram));
     ps3_guest_memory memory;
@@ -43,7 +44,7 @@ int main(void) {
     put64(file + 96, 4u);        /* file size */
     put64(file + 104, 8u);       /* memory size, including BSS */
     put64(file + 112, 4u);
-    file[120] = 0x38u; file[121] = 0x60u; file[122] = 0x00u; file[123] = 0x07u;
+    file[120] = 0x38u; file[121] = 0x60u; file[122] = 0x00u; file[123] = 0x07u;\n    file[124] = 0x48u; file[125] = 0x00u; file[126] = 0x00u; file[127] = 0x00u; /* b to self */
 
     CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
         sizeof(ram), &entry) == PS3_GUEST_ELF_OK);
@@ -55,7 +56,7 @@ int main(void) {
     uint32_t word = 0u;
     CHECK(ps3_guest_memory_read32(&memory, 0x1000u, &word));
     CHECK(word == 0x38600007u);
-    CHECK(!ps3_guest_memory_write32(&memory, 0x1000u, 1u));
+    CHECK(!ps3_guest_memory_write32(&memory, 0x1000u, 1u));\n    uint64_t registers[32] = {0};\n    size_t steps = 0u;\n    CHECK(ppc_cpu_run_guest(&memory, entry, registers, 8u, &steps) ==\n        PPC_CPU_STEP_LIMIT);\n    CHECK(steps == 8u);\n    CHECK(registers[3] == 7u);
 
     ps3_guest_memory_init(&memory);
     file[71] = 4u; /* read-only segment: entry is not executable */
