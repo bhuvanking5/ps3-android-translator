@@ -256,12 +256,28 @@ final class PkgMetadataInspector {
             out.append("Metadata trailer/authentication bytes: ")
                 .append(info.metadataTrailingBytes).append(" (left uninterpreted)\n");
         }
-        out.append("Encrypted data region: offset ").append(info.dataOffset).append(", ")
+        out.append("Data region: offset ").append(info.dataOffset).append(", ")
             .append(info.dataSize).append(" bytes\n")
-            .append("Total file size: ").append(info.totalSize).append(" bytes\n\n")
-            .append("Metadata records were bounds-checked and read without decryption. ")
-            .append("This does NOT extract, install, or launch the game. The encrypted item table, ")
-            .append("protected SELF loading, PS3 firmware services, SPU and RSX remain unsupported.");
+            .append("Total file size: ").append(info.totalSize).append(" bytes\n\n");
+
+        if (info.type != 1) {
+            out.append("Launch assessment: BLOCKED — this is not identified as a PS3 type-1 package.\n");
+        } else if (info.revision == 0x8000) {
+            out.append("Launch assessment: BLOCKED — finalized/retail PKG detected. ")
+                .append("This prototype cannot process protected package contents.\n");
+        } else if (info.revision == 0) {
+            out.append("Launch assessment: NOT READY — debug-revision PKG detected, but ")
+                .append("this prototype still has no PKG item-table parser or bounded payload extractor.\n");
+        } else {
+            out.append("Launch assessment: NOT READY — package revision is not recognized, ")
+                .append("and PKG payload extraction is not implemented.\n");
+        }
+
+        out.append("Next safe milestone: parse and validate the package item table, then extract ")
+            .append("only supported, unencrypted homebrew files with strict path and size limits. ")
+            .append("Do not feed raw PKG bytes to the ELF runner. Metadata was read without decryption; ")
+            .append("this report does NOT extract, install, or launch the game. SELF loading, ")
+            .append("PS3 firmware services, SPU and RSX remain unsupported.");
         return out.toString();
     }
 }
