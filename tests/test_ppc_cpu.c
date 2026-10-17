@@ -25,6 +25,11 @@ static uint32_t rlwinm(unsigned rs, unsigned ra, unsigned sh,
     return (21u << 26) | (rs << 21) | (ra << 16) | (sh << 11) |
            (mb << 6) | (me << 1);
 }
+static uint32_t rlwnm(unsigned rs, unsigned ra, unsigned rb,
+                       unsigned mb, unsigned me) {
+    return (23u << 26) | (rs << 21) | (ra << 16) | (rb << 11) |
+           (mb << 6) | (me << 1);
+}
 static uint32_t logical_imm(unsigned opcode, unsigned rs, unsigned ra, unsigned imm) {
     return (opcode << 26) | (rs << 21) | (ra << 16) | (imm & 0xffffu);
 }
@@ -93,6 +98,20 @@ int main(void) {
     CHECK(gpr[4] == 0x00123400u);
     CHECK(gpr[5] == 0x1234u);
     CHECK(gpr[6] == 0x00000004u);
+
+    /* RLWNM: shift count comes from the low five bits of a GPR. */
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t rotate_mask_register[] = {
+        addi(3, 0, 0x1234), addi(4, 0, 8), addi(5, 0, 0),
+        rlwnm(3, 6, 4, 0, 31),       /* rotate left by 8 */
+        rlwnm(3, 7, 5, 16, 31),      /* zero shift, keep low 16 bits */
+        addi(8, 0, 40),
+        rlwnm(3, 9, 8, 0, 31)        /* only low five shift bits are used */
+    };
+    CHECK(ppc_cpu_run(rotate_mask_register, 7, gpr) == PPC_CPU_OK);
+    CHECK(gpr[6] == 0x00123400u);
+    CHECK(gpr[7] == 0x1234u);
+    CHECK(gpr[9] == 0x00123400u);
 
     memset(gpr, 0, sizeof(gpr));
     const uint32_t negative[] = { addi(3, 0, -2) };
