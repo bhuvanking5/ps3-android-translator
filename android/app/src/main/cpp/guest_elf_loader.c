@@ -35,11 +35,12 @@ static uint64_t be64(const uint8_t *p) {
     return ((uint64_t)be32(p) << 32) | be32(p + 4);
 }
 
-ps3_guest_elf_status ps3_guest_elf_load(
+ps3_guest_elf_status ps3_guest_elf_load_with_resolver(
     const uint8_t *file, size_t file_size,
     ps3_guest_memory *memory,
     uint8_t *ram, uint32_t ram_base, uint32_t ram_size,
-    uint32_t *entry_point) {
+    uint32_t *entry_point,
+    ps3_guest_symbol_resolver resolver, void *resolver_context) {
     if (file == 0 || memory == 0 || ram == 0 || entry_point == 0 ||
         file_size < ELF_HEADER_SIZE || ram_size == 0u) {
         return PS3_GUEST_ELF_INVALID_ARGUMENT;
@@ -140,7 +141,8 @@ ps3_guest_elf_status ps3_guest_elf_load(
     if (has_dynamic) {
         const ps3_guest_dynamic_status dynamic_status =
             ps3_guest_elf_parse_rela(file, file_size, relocations,
-                PS3_GUEST_RELOCATION_MAX_RECORDS, &relocation_count);
+                PS3_GUEST_RELOCATION_MAX_RECORDS, &relocation_count,
+                resolver, resolver_context);
         if (dynamic_status != PS3_GUEST_DYNAMIC_OK) {
             return PS3_GUEST_ELF_RELOCATION_REQUIRED;
         }
@@ -185,4 +187,13 @@ ps3_guest_elf_status ps3_guest_elf_load(
     free(staged_ram);
     *entry_point = (uint32_t)entry;
     return PS3_GUEST_ELF_OK;
+}
+
+ps3_guest_elf_status ps3_guest_elf_load(
+    const uint8_t *file, size_t file_size,
+    ps3_guest_memory *memory,
+    uint8_t *ram, uint32_t ram_base, uint32_t ram_size,
+    uint32_t *entry_point) {
+    return ps3_guest_elf_load_with_resolver(file, file_size, memory, ram,
+        ram_base, ram_size, entry_point, NULL, NULL);
 }
