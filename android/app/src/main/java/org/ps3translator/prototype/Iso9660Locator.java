@@ -87,11 +87,16 @@ final class Iso9660Locator {
         return parser.find();
     }
 
-    byte[] readEboot(Result result) throws IOException {
-        if (result.size < 4 || result.size > MAX_EBOOT_BYTES) {
-            throw new IOException("EBOOT.BIN size is outside the experimental 4-byte to 32 MiB limit.");
+    static byte[] readEbootForRun(ContentResolver resolver, Uri uri, Result result)
+            throws IOException {
+        long size = querySize(resolver, uri);
+        if (size < 0) throw new IOException("The file provider did not report the ISO size.");
+        Iso9660Locator parser = new Iso9660Locator(resolver, uri, size);
+        if (result.offset < 0 || result.size < 4 || result.size > MAX_EBOOT_BYTES
+                || result.offset > size || result.size > size - result.offset) {
+            throw new IOException("EBOOT.BIN is outside the experimental 4-byte to 32 MiB limit.");
         }
-        return readAt(result.offset, (int) result.size);
+        return parser.readAt(result.offset, (int) result.size);
     }
 
     private Result find() throws IOException {
