@@ -4,7 +4,7 @@
 #include "guest_elf_loader.h"
 #include "ppc_cpu.h"
 
-#define CHECK(c) do { if (!(c)) { fprintf(stderr, "CHECK failed at line %d: %s\\n", __LINE__, #c); return 1; } } while (0)
+#define CHECK(c) do { if (!(c)) { fprintf(stderr, "CHECK failed at line %d: %s\n", __LINE__, #c); return 1; } } while (0)
 
 static void put16(uint8_t *p, uint16_t v) {
     p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v;
@@ -25,7 +25,7 @@ int main(void) {
     uint32_t entry = 0u;
     ps3_guest_memory_init(&memory);
 
-    memcpy(file, "\\x7f""ELF", 4);
+    memcpy(file, "\x7f""ELF", 4);
     file[4] = 2u; file[5] = 2u; file[6] = 1u;
     put16(file + 16, 2u); put16(file + 18, 21u); put32(file + 20, 1u);
     put64(file + 24, 0x1000u); put64(file + 32, 64u);
