@@ -73,3 +73,18 @@ disc formats instead of treating all such files as unknown. The scan is
 bounded to 32 sectors beginning at logical sector 16; it does not mount the
 image, traverse directories, or execute content. Android build/CI must pass
 before this change is considered validated.
+
+
+## ISO 9660 metadata traversal (2026-10-17)
+
+Added `tools/inspect_iso9660.py` and `tests/test_inspect_iso9660.py`. The new
+read-only parser validates a primary volume descriptor, volume geometry,
+both-endian fields, root directory record, directory record boundaries, and
+file/directory extents. It enumerates metadata under hard entry-count and
+nesting-depth limits; it does not extract or execute files. This milestone is
+ISO 9660 only; UDF traversal and PS3 PKG metadata parsing remain unimplemented.
+
+CI for the earlier container-signature commit completed successfully: host C/Python
+tests, ARM64 translated-code execution, Android ARM64 native bridge compilation,
+debug APK build, and APK native-bridge verification all passed. The new ISO parser
+and its tests still require CI validation on the latest commit.
