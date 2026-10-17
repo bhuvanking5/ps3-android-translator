@@ -94,6 +94,21 @@ ppc_cpu_status ppc_cpu_run_with_memory(
             const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
                                        (opcode == 27u ? 16u : 0u);
             registers[ra] = registers[rt] ^ immediate;
+        } else if (opcode == 21u) { /* RLWINM: rotate left word then apply wrapped bit mask */
+            const unsigned shift = (ins >> 11) & 31u;
+            const unsigned mb = (ins >> 6) & 31u;
+            const unsigned me = (ins >> 1) & 31u;
+            const uint32_t source = (uint32_t)registers[rt];
+            const uint32_t rotated = shift == 0u ? source :
+                (uint32_t)((source << shift) | (source >> (32u - shift)));
+            uint32_t mask = 0u;
+            unsigned bit = mb;
+            for (;;) {
+                mask |= (uint32_t)1u << (31u - bit);
+                if (bit == me) break;
+                bit = (bit + 1u) & 31u;
+            }
+            registers[ra] = (uint64_t)(rotated & mask);
         } else if (opcode == 28u) { /* ANDI.: logical immediate, updates CR0 */
             const uint64_t value = registers[rt] & (uint64_t)(ins & 0xffffu);
             registers[ra] = value;
