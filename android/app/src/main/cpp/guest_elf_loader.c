@@ -1,7 +1,10 @@
 #include "guest_elf_loader.h"
 
 #include <limits.h>
+#include <stdlib.h>
 #include <string.h>
+#include "guest_elf_dynamic.h"
+#include "guest_relocations.h"
 
 #define ELF_HEADER_SIZE 64u
 #define ELF_PROGRAM_HEADER_SIZE 56u
@@ -66,6 +69,7 @@ ps3_guest_elf_status ps3_guest_elf_load(
     load_segment segments[PS3_GUEST_MEMORY_MAX_REGIONS];
     size_t segment_count = 0u;
     int entry_is_executable = 0;
+    int has_dynamic = 0;
     const uint64_t ram_end = (uint64_t)ram_base + ram_size;
     if (ram_end > (uint64_t)UINT32_MAX + 1u) {
         return PS3_GUEST_ELF_OUT_OF_BOUNDS;
@@ -74,7 +78,11 @@ ps3_guest_elf_status ps3_guest_elf_load(
     for (uint16_t i = 0; i < phnum; ++i) {
         const uint8_t *ph = file + (size_t)(phoff + (uint64_t)i * phentsize);
         const uint32_t program_type = be32(ph);
-        if (program_type == ELF_PT_DYNAMIC) return PS3_GUEST_ELF_RELOCATION_REQUIRED;
+        if (program_type == ELF_PT_DYNAMIC) {
+            if (has_dynamic) return PS3_GUEST_ELF_RELOCATION_REQUIRED;
+            has_dynamic = 1;
+            continue;
+        }
         if (program_type != ELF_PT_LOAD) continue;
         if (segment_count >= PS3_GUEST_MEMORY_MAX_REGIONS) {
             return PS3_GUEST_ELF_UNSUPPORTED;
@@ -127,21 +135,54 @@ ps3_guest_elf_status ps3_guest_elf_load(
         }
     }
 
+    ps3_guest_relocation relocations[PS3_GUEST_RELOCATION_MAX_RECORDS];
+    size_t relocation_count = 0u;
+    if (has_dynamic) {
+        const ps3_guest_dynamic_status dynamic_status =
+            ps3_guest_elf_parse_rela(file, file_size, relocations,
+                PS3_GUEST_RELOCATION_MAX_RECORDS, &relocation_count);
+        if (dynamic_status != PS3_GUEST_DYNAMIC_OK) {
+            return PS3_GUEST_ELF_RELOCATION_REQUIRED;
+        }
+    }
+
+    /* Stage the entire RAM image and map before any externally visible mutation. */
+    uint8_t *staged_ram = (uint8_t *)malloc((size_t)ram_size);
+    if (staged_ram == 0) return PS3_GUEST_ELF_ALLOCATION_FAILED;
+    memcpy(staged_ram, ram, (size_t)ram_size);
+    ps3_guest_memory staged_memory = *memory;
+
     for (size_t i = 0; i < segment_count; ++i) {
         const load_segment *seg = &segments[i];
         const size_t offset = (size_t)(seg->vaddr - ram_base);
-        memset(ram + offset, 0, (size_t)seg->memsz);
-        memcpy(ram + offset, file + (size_t)seg->offset, (size_t)seg->filesz);
+        memset(staged_ram + offset, 0, (size_t)seg->memsz);
+        memcpy(staged_ram + offset, file + (size_t)seg->offset,
+               (size_t)seg->filesz);
         unsigned permissions = 0u;
         if ((seg->flags & ELF_PF_R) != 0u) permissions |= PS3_GUEST_MEMORY_READ;
         if ((seg->flags & ELF_PF_W) != 0u) permissions |= PS3_GUEST_MEMORY_WRITE;
         if ((seg->flags & ELF_PF_X) != 0u) permissions |= PS3_GUEST_MEMORY_EXECUTE;
-        if (!ps3_guest_memory_map(memory, (uint32_t)seg->vaddr,
-                (uint32_t)seg->memsz, ram + offset, permissions)) {
-            /* Preflight checks make this path defensive, not expected. */
+        if (!ps3_guest_memory_map(&staged_memory, (uint32_t)seg->vaddr,
+                (uint32_t)seg->memsz, staged_ram + offset, permissions)) {
+            free(staged_ram);
             return PS3_GUEST_ELF_MEMORY_MAP_ERROR;
         }
     }
+
+    if (has_dynamic && ps3_guest_relocations_apply(&staged_memory,
+            relocations, relocation_count) != PS3_GUEST_RELOC_OK) {
+        free(staged_ram);
+        return PS3_GUEST_ELF_RELOCATION_REQUIRED;
+    }
+
+    memcpy(ram, staged_ram, (size_t)ram_size);
+    *memory = staged_memory;
+    /* New regions must point at caller-owned RAM, not the temporary staging copy. */
+    for (size_t i = memory->count - segment_count; i < memory->count; ++i) {
+        const uint32_t offset = memory->regions[i].base - ram_base;
+        memory->regions[i].bytes = ram + offset;
+    }
+    free(staged_ram);
     *entry_point = (uint32_t)entry;
     return PS3_GUEST_ELF_OK;
 }
