@@ -105,3 +105,24 @@ target_include_directories(test_prototype_guest_io PRIVATE
 )
 target_compile_options(test_prototype_guest_io PRIVATE -Wall -Wextra -Werror)
 add_test(NAME prototype_guest_io COMMAND test_prototype_guest_io)
+
+add_executable(test_guest_memory
+  tests/test_guest_memory.c
+  android/app/src/main/cpp/guest_memory.c
+)
+target_include_directories(test_guest_memory PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_guest_memory PRIVATE -Wall -Wextra -Werror)
+add_test(NAME bounded_guest_memory COMMAND test_guest_memory)
+
+add_executable(test_ppc_guest_memory
+  tests/test_ppc_guest_memory.c
+  android/app/src/main/cpp/guest_memory.c
+  android/app/src/main/cpp/ppc_cpu.c
+)
+target_include_directories(test_ppc_guest_memory PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_ppc_guest_memory PRIVATE -Wall -Wextra -Werror)
+add_test(NAME ppc_guest_memory_integration COMMAND test_ppc_guest_memory)
