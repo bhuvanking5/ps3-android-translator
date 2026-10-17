@@ -77,6 +77,38 @@ int main(void) {
     CHECK(data[0] == 0u && data[1] == 0u &&
           data[2] == 0u && data[3] == 7u);
 
+    /* A load from unmapped guest data must stop with a memory fault. */
+    uint8_t fault_code[8] = {0};
+    put32(fault_code, 0x38805000u);     /* addi r4,0,0x5000 */
+    put32(fault_code + 4, 0x80640000u); /* lwz r3,0(r4) */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x6000u, sizeof(fault_code),
+        fault_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 99u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x6000u, registers, 4u, &steps) ==
+        PPC_CPU_MEMORY_ACCESS_ERROR);
+    CHECK(steps == 2u);
+
+    /* A store to read-only guest data must also fail safely. */
+    uint8_t store_code[12] = {0};
+    uint8_t readonly_data[4] = {0};
+    put32(store_code, 0x38600009u);      /* addi r3,0,9 */
+    put32(store_code + 4, 0x38805000u);  /* addi r4,0,0x5000 */
+    put32(store_code + 8, 0x90640000u);  /* stw r3,0(r4) */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x6000u, sizeof(store_code),
+        store_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    CHECK(ps3_guest_memory_map(&memory, 0x5000u, sizeof(readonly_data),
+        readonly_data, PS3_GUEST_MEMORY_READ));
+    memset(registers, 0, sizeof(registers));
+    steps = 99u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x6000u, registers, 4u, &steps) ==
+        PPC_CPU_MEMORY_ACCESS_ERROR);
+    CHECK(steps == 3u);
+    CHECK(readonly_data[0] == 0u && readonly_data[1] == 0u &&
+          readonly_data[2] == 0u && readonly_data[3] == 0u);
+
     /* Unsupported guest opcodes must stop instead of being silently skipped. */
     uint8_t invalid_instruction[4] = {0u, 0u, 0u, 0u};
     ps3_guest_memory_init(&memory);
