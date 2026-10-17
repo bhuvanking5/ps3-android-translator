@@ -5,7 +5,6 @@ import android.net.Uri;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,6 +16,7 @@ final class PkgItemTableInspector {
     private static final int ITEM_BYTES = 0x20;
     private static final int MAX_ITEMS = 10000;
     private static final int MAX_NAME_BYTES = 4096;
+    private static final int MAX_DISPLAY_ITEMS = 40;
 
     private PkgItemTableInspector() {}
 
@@ -52,7 +52,7 @@ final class PkgItemTableInspector {
         }
 
         byte[] table = readAt(resolver, uri, info.dataOffset + tableOffset, (int) tableSize);
-        List<String> names = new ArrayList<>();
+        List<String> displayItems = new ArrayList<>();
         for (int i = 0; i < (int) info.itemCount; i++) {
             int p = i * ITEM_BYTES;
             long nameOffset = u32(table, p);
@@ -64,28 +64,42 @@ final class PkgItemTableInspector {
                     || bodyOffset > info.dataSize || bodySize > info.dataSize - bodyOffset) {
                 throw new IOException("Item " + i + " has invalid filename or payload bounds.");
             }
-            if (names.size() < 40) {
-                byte[] name = readAt(resolver, uri, info.dataOffset + nameOffset, (int) nameLength);
-                String decoded = asciiName(name);
-                if (decoded == null) {
-                    return "Item-table bytes were readable, but filename data is not plain printable ASCII. This may be encrypted or use an unsupported layout; no extraction or launch was attempted.";
-                }
-                names.add(decoded);
+
+            // Read and validate every filename, not only the displayed first 40.
+            // This ensures a truncated or unsafe later entry cannot be reported as fully validated.
+            byte[] nameBytes = readAt(resolver, uri, info.dataOffset + nameOffset, (int) nameLength);
+            String name = asciiName(nameBytes);
+            if (name == null) {
+                return "Item-table bytes were readable, but filename data is not plain printable ASCII or contains an unsafe path. This may be encrypted or use an unsupported layout; no extraction or launch was attempted.";
+            }
+            if (displayItems.size() < MAX_DISPLAY_ITEMS) {
+                displayItems.add(name + " (" + bodySize + " bytes; " + classifyName(name) + ")");
             }
         }
 
         StringBuilder out = new StringBuilder();
         out.append("Plaintext item-table inspection: validated ")
             .append(info.itemCount).append(" bounded records.\n");
-        for (int i = 0; i < names.size(); i++) {
-            out.append("  ").append(i + 1).append(". ").append(names.get(i)).append('\n');
+        for (int i = 0; i < displayItems.size(); i++) {
+            out.append("  ").append(i + 1).append(". ").append(displayItems.get(i)).append('\n');
         }
-        if (info.itemCount > names.size()) {
-            out.append("  … ").append(info.itemCount - names.size())
+        if (info.itemCount > displayItems.size()) {
+            out.append("  … ").append(info.itemCount - displayItems.size())
                 .append(" more item names not displayed.\n");
         }
-        out.append("This is metadata-only: files were not extracted, installed, or launched. Executable/SELF handling and PS3 OS services remain unsupported.");
+        out.append("Classification is based on filenames only, not executable contents. ")
+            .append("This is metadata-only: files were not extracted, installed, or launched. ")
+            .append("SELF handling and PS3 OS services remain unsupported.");
         return out.toString();
+    }
+
+    private static String classifyName(String name) {
+        String upper = name.toUpperCase(java.util.Locale.ROOT);
+        int slash = upper.lastIndexOf('/');
+        String base = slash >= 0 ? upper.substring(slash + 1) : upper;
+        if (base.equals("PARAM.SFO")) return "PARAM.SFO candidate";
+        if (base.equals("EBOOT.BIN")) return "executable candidate (ELF/SELF not checked)";
+        return "data";
     }
 
     private static byte[] readAt(ContentResolver resolver, Uri uri, long offset, int count)
