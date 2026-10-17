@@ -21,6 +21,26 @@ static uint32_t movn(unsigned rd, unsigned imm16) {
     return 0x92800000u | ((uint32_t)(imm16 & 0xffffu) << 5) | rd;
 }
 
+static uint32_t movz_shift(unsigned rd, unsigned imm16, unsigned shift) {
+    return 0xD2800000u | ((shift / 16u) << 21) |
+           ((uint32_t)(imm16 & 0xffffu) << 5) | rd;
+}
+
+static uint32_t movk_shift(unsigned rd, unsigned imm16, unsigned shift) {
+    return 0xF2800000u | ((shift / 16u) << 21) |
+           ((uint32_t)(imm16 & 0xffffu) << 5) | rd;
+}
+
+static int emit_u64_constant(uint32_t *out, size_t cap, size_t *used,
+                             unsigned rd, uint64_t value) {
+    if (!emit(out, cap, used, movz_shift(rd, (unsigned)value, 0u))) return 0;
+    for (unsigned shift = 16u; shift < 64u; shift += 16u) {
+        if (!emit(out, cap, used,
+                  movk_shift(rd, (unsigned)(value >> shift), shift))) return 0;
+    }
+    return 1;
+}
+
 static uint32_t load_gpr(unsigned target, unsigned ppc_reg) {
     /* LDR Xt, [SP, #(ppc_reg * 8)] */
     return 0xF9400000u | (ppc_reg << 10) | (31u << 5) | target;
@@ -200,6 +220,32 @@ ppc_to_arm64_status ppc_translate_to_arm64(
                       mul_reg(SCRATCH_A, SCRATCH_A, SCRATCH_B)) ||
                 !emit_gpr_store(output, output_capacity, &used,
                                 SCRATCH_A, rt)) {
+                return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+            }
+            continue;
+        }
+
+        if (opcode == 15u) {
+            /* ADDIS: signed 16-bit immediate shifted left by 16. */
+            const int64_t signed_immediate =
+                (int64_t)(int16_t)(ins & 0xffffu) * 65536LL;
+            const uint64_t immediate = (uint64_t)signed_immediate;
+            if (ra == 0u) {
+                if (!emit_u64_constant(output, output_capacity, &used,
+                                       SCRATCH_A, immediate)) {
+                    return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+                }
+            } else {
+                if (!emit_gpr_load(output, output_capacity, &used,
+                                   SCRATCH_A, ra) ||
+                    !emit_u64_constant(output, output_capacity, &used,
+                                       SCRATCH_B, immediate) ||
+                    !emit(output, output_capacity, &used,
+                          add_reg(SCRATCH_A, SCRATCH_A, SCRATCH_B))) {
+                    return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
+                }
+            }
+            if (!emit_gpr_store(output, output_capacity, &used, SCRATCH_A, rt)) {
                 return PPC_TO_ARM64_OUTPUT_TOO_SMALL;
             }
             continue;
