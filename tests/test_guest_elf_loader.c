@@ -140,7 +140,7 @@ int main(void) {
 
     /* End-to-end smoke test: load a tiny ELF and execute its PPC entry point. */
     memset(file, 0, sizeof(file));
-    memcpy(file, "\\x7f""ELF", 4);
+    memcpy(file, "\x7f""ELF", 4);
     file[4] = 2u; file[5] = 2u; file[6] = 1u;
     put16(file + 16, 2u); put16(file + 18, 21u); put32(file + 20, 1u);
     put64(file + 24, 0x10000u); put64(file + 32, 64u);
