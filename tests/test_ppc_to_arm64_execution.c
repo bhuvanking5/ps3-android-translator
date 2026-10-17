@@ -142,6 +142,17 @@ int main(void) {
         return 1;
     }
 
+    const uint32_t addis_program[] = {
+        (14u << 26) | (3u << 21) | 0x1000u,
+        (15u << 26) | (4u << 21) | (3u << 16) | 0xFFFEu,
+        (15u << 26) | (5u << 21) | 0x1234u
+    };
+    if (check_program("ADDIS signed shifted immediates", addis_program,
+            sizeof(addis_program) / sizeof(addis_program[0]), 5u,
+            0x12340000u) != 0) {
+        return 1;
+    }
+
     const uint32_t shifted_logical_program[] = {
         (14u << 26) | (3u << 21) | 0x1234u,
         (25u << 26) | (3u << 21) | (4u << 16) | 0xABCDu,
