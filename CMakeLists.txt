@@ -150,3 +150,13 @@ target_include_directories(test_guest_relocations PRIVATE
 )
 target_compile_options(test_guest_relocations PRIVATE -Wall -Wextra -Werror)
 add_test(NAME native_guest_relocations COMMAND test_guest_relocations)
+
+add_executable(test_guest_elf_dynamic
+  tests/test_guest_elf_dynamic.c
+  android/app/src/main/cpp/guest_elf_dynamic.c
+)
+target_include_directories(test_guest_elf_dynamic PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_guest_elf_dynamic PRIVATE -Wall -Wextra -Werror)
+add_test(NAME native_guest_elf_dynamic COMMAND test_guest_elf_dynamic)
