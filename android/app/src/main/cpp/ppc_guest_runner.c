@@ -82,6 +82,11 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
         } else if (opcode == 7u) {
             registers[rt] = registers[ra] * (uint64_t)(int64_t)sign16(ins);
         } else if (opcode == 31u) {
+            /* Rc=1 requires CR0 updates, which this guest runner does not implement. */
+            if ((ins & 1u) != 0u) {
+                if (steps_executed != 0) *steps_executed = steps;
+                return PPC_CPU_UNSUPPORTED_INSTRUCTION;
+            }
             const unsigned xo = (ins >> 1) & 0x3ffu;
             if (xo == 266u) registers[rt] = registers[ra] + registers[rb];
             else if (xo == 40u) registers[rt] = registers[rb] - registers[ra];
