@@ -138,6 +138,37 @@ int main(void) {
         PPC_CPU_MEMORY_ACCESS_ERROR);
     CHECK(steps == 0u);
 
+    /* End-to-end smoke test: load a tiny ELF and execute its PPC entry point. */
+    memset(file, 0, sizeof(file));
+    memcpy(file, "\\x7f""ELF", 4);
+    file[4] = 2u; file[5] = 2u; file[6] = 1u;
+    put16(file + 16, 2u); put16(file + 18, 21u); put32(file + 20, 1u);
+    put64(file + 24, 0x10000u); put64(file + 32, 64u);
+    put16(file + 52, 64u); put16(file + 54, 56u); put16(file + 56, 1u);
+    put32(file + 64, 1u); put32(file + 68, 5u);
+    put64(file + 72, 120u); put64(file + 80, 0x10000u);
+    put64(file + 88, 0x10000u); put64(file + 96, 16u);
+    put64(file + 104, 16u); put64(file + 112, 4u);
+    put32(file + 120, 0x38600007u); /* addi r3,0,7 */
+    put32(file + 124, 0x38800005u); /* addi r4,0,5 */
+    put32(file + 128, 0x7ca32214u); /* add r5,r3,r4 */
+    put32(file + 132, 0x48000000u); /* b .: keep the bounded runner busy */
+
+    memset(ram, 0, sizeof(ram));
+    ps3_guest_memory_init(&memory);
+    entry = 0u;
+    CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x10000u,
+        sizeof(ram), &entry) == PS3_GUEST_ELF_OK);
+    CHECK(entry == 0x10000u);
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, entry, registers, 4u, &steps) ==
+        PPC_CPU_STEP_LIMIT);
+    CHECK(steps == 4u);
+    CHECK(registers[3] == 7u);
+    CHECK(registers[4] == 5u);
+    CHECK(registers[5] == 12u);
+
     ps3_guest_memory_init(&memory);
     file[71] = 4u;
     CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
