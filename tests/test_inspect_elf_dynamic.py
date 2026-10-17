@@ -43,12 +43,12 @@ def make_dynamic_elf():
     put64(data, 160, 9 * 16)
 
     entries = [
-        (5, 0x1180),   # DT_STRTAB
+        (5, 0x11A0),   # DT_STRTAB
         (10, 14),      # DT_STRSZ
         (1, 1),        # DT_NEEDED, offset 1
-        (6, 0x11C0),   # DT_SYMTAB
+        (6, 0x1200),   # DT_SYMTAB
         (11, 24),      # DT_SYMENT
-        (7, 0x11A0),   # DT_RELA
+        (7, 0x11C0),   # DT_RELA
         (8, 24),       # DT_RELASZ
         (9, 24),       # DT_RELAENT
         (0, 0),        # DT_NULL
@@ -57,9 +57,9 @@ def make_dynamic_elf():
         struct.pack_into(">qQ", data, 0x100 + i * 16, tag, value)
     data[0x180:0x18E] = b"\0libc_stub.so\0"
     # One big-endian Elf64_Rela: target 0x2000, symbol 3, type 22, addend -4.
-    struct.pack_into(">QQq", data, 0x1A0, 0x2000, (3 << 32) | 22, -4)
+    struct.pack_into(">QQq", data, 0x1C0, 0x2000, (3 << 32) | 22, -4)
     # Dynamic symbol 3 is an undefined imported function named libc_stub.so.
-    struct.pack_into(">IBBHQQ", data, 0x1C0 + 3 * 24, 1, 0x12, 0, 0, 0, 0)
+    struct.pack_into(">IBBHQQ", data, 0x200 + 3 * 24, 1, 0x12, 0, 0, 0, 0)
     return data
 
 
@@ -69,7 +69,7 @@ class DynamicELFInspectionTests(unittest.TestCase):
         self.assertEqual(result["elf_type"], "ET_DYN")
         self.assertTrue(result["has_dynamic_segment"])
         self.assertEqual(result["needed_libraries"], ["libc_stub.so"])
-        self.assertEqual(result["relocation_metadata"]["DT_RELA"], 0x11A0)
+        self.assertEqual(result["relocation_metadata"]["DT_RELA"], 0x11C0)
         self.assertEqual(result["relocation_metadata"]["DT_RELASZ"], 24)
         self.assertEqual(result["relocations"]["DT_RELA"], [
             {"offset": 0x2000, "symbol_index": 3, "type": 22, "addend": -4,
