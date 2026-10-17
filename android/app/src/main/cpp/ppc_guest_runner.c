@@ -59,10 +59,14 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
         } else if (opcode == 15u) {
             const uint64_t base = ra == 0u ? 0u : registers[ra];
             registers[rt] = base + (uint64_t)((int64_t)sign16(ins) * 65536);
-        } else if (opcode == 24u) {
-            registers[ra] = registers[rt] | (uint64_t)(ins & 0xffffu);
-        } else if (opcode == 26u) {
-            registers[ra] = registers[rt] ^ (uint64_t)(ins & 0xffffu);
+        } else if (opcode == 24u || opcode == 25u) {
+            const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
+                                       (opcode == 25u ? 16u : 0u);
+            registers[ra] = registers[rt] | immediate;
+        } else if (opcode == 26u || opcode == 27u) {
+            const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
+                                       (opcode == 27u ? 16u : 0u);
+            registers[ra] = registers[rt] ^ immediate;
         } else if (opcode == 32u) {
             const uint32_t address = (uint32_t)((ra == 0u ? 0u : registers[ra]) +
                 (uint64_t)(int64_t)sign16(ins));
