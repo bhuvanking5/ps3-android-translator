@@ -49,3 +49,42 @@ This is a useful device-side smoke test for the JNI → ELF loader → guest mem
 The bounded native PowerPC interpreter and experimental AArch64 translator now include ORIS and XORIS (opcodes 25 and 27) alongside ORI/XORI. These instructions shift the 16-bit immediate left by 16 before applying OR/XOR. Regression tests cover the C reference interpreter, Python reference decoder/execution, translation acceptance, and the native ARM64 differential test path.
 
 This remains a narrow instruction-subset improvement. It does not add full PPU semantics, dynamic block caching, PS3 system services, SPU/RSX support, or real-game compatibility.
+
+
+## Read-only PKG/ISO signature inspector (2026-10-17)
+
+Added `tools/inspect_ps3_container.py` and unit tests for bounded signature
+recognition of PKG magic, ELF magic, ISO 9660 volume descriptors, and basic
+UDF recognition/anchor signatures. This makes file identification testable
+without pretending a recognized header means a game can run. The inspector is
+a host-side diagnostic and is not yet connected to the Android app.
+
+The tool does not extract/install PKG files, traverse ISO/UDF directories,
+decrypt protected content, locate an executable, or launch a game. The project
+still has **zero confirmed real-game boots**. Next container milestone is
+bounds-checked directory and package metadata parsing, followed by loading a
+supported unencrypted homebrew executable through a proper process runtime.
+
+
+The Android selected-file path was also updated to scan standard volume-descriptor
+locations for ISO 9660/UDF signatures after the quick ELF/PKG/SELF checks. It
+now gives a specific “signature detected, not launched” diagnostic for those
+disc formats instead of treating all such files as unknown. The scan is
+bounded to 32 sectors beginning at logical sector 16; it does not mount the
+image, traverse directories, or execute content. Android build/CI must pass
+before this change is considered validated.
+
+
+## ISO 9660 metadata traversal (2026-10-17)
+
+Added `tools/inspect_iso9660.py` and `tests/test_inspect_iso9660.py`. The new
+read-only parser validates a primary volume descriptor, volume geometry,
+both-endian fields, root directory record, directory record boundaries, and
+file/directory extents. It enumerates metadata under hard entry-count and
+nesting-depth limits; it does not extract or execute files. This milestone is
+ISO 9660 only; UDF traversal and PS3 PKG metadata parsing remain unimplemented.
+
+CI for the earlier container-signature commit completed successfully: host C/Python
+tests, ARM64 translated-code execution, Android ARM64 native bridge compilation,
+debug APK build, and APK native-bridge verification all passed. The new ISO parser
+and its tests still require CI validation on the latest commit.
