@@ -109,6 +109,24 @@ int main(void) {
     CHECK(ppc_cpu_run(out_of_range_branch, 1, gpr) == PPC_CPU_UNSUPPORTED_INSTRUCTION);
     const uint32_t linked_branch[] = { branch(0, 0, 1) };
     CHECK(ppc_cpu_run(linked_branch, 1, gpr) == PPC_CPU_UNSUPPORTED_INSTRUCTION);
+    const uint32_t absolute_branch[] = { branch(0, 1, 0) };
+    CHECK(ppc_cpu_run(absolute_branch, 1, gpr) == PPC_CPU_UNSUPPORTED_INSTRUCTION);
+
+    /* An untaken conditional branch must not fail just because its unused
+       target lies outside the supplied instruction array. */
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t untaken_out_of_range[] = {
+        addi(3, 0, 7), cmpwi(0, 3, 8),
+        cond_branch(12, 2, 0x100), addi(4, 0, 9)
+    };
+    CHECK(ppc_cpu_run(untaken_out_of_range, 4, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 9u);
+
+    const uint32_t absolute_cond_branch[] = {
+        (16u << 26) | (12u << 21) | (2u << 16) | 2u
+    };
+    CHECK(ppc_cpu_run(absolute_cond_branch, 1, gpr) ==
+          PPC_CPU_UNSUPPORTED_INSTRUCTION);
 
     CHECK(ppc_cpu_run(program, 0, gpr) == PPC_CPU_INSTRUCTION_LIMIT);
     CHECK(ppc_cpu_run(program, PPC_CPU_MAX_INSTRUCTIONS + 1u, gpr) == PPC_CPU_INSTRUCTION_LIMIT);
