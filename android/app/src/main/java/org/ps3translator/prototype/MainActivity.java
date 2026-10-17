@@ -5,6 +5,8 @@ import android.os.Bundle;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.database.Cursor;
 import android.provider.OpenableColumns;
@@ -41,19 +43,44 @@ public final class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(24, 28, 24, 28);
-        layout.setBackgroundColor(Color.rgb(18, 22, 32));
+        layout.setPadding(dp(18), dp(22), dp(18), dp(30));
+        layout.setBackgroundColor(Color.rgb(10, 15, 28));
+        scroll.setFillViewport(true);
         scroll.addView(layout);
 
-        TextView title = text("PS3 → Android", 28, Color.WHITE);
-        title.setGravity(Gravity.CENTER);
-        layout.addView(title);
-        TextView status = text(nativeStatus(), 16, Color.rgb(180, 220, 255));
-        status.setPadding(0, 18, 0, 16);
-        layout.addView(status);
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(LinearLayout.VERTICAL);
+        hero.setPadding(dp(20), dp(22), dp(20), dp(20));
+        hero.setBackground(roundedBackground(
+            new int[] {Color.rgb(23, 48, 82), Color.rgb(17, 27, 48)}, dp(24)));
+        TextView eyebrow = text("ANDROID RESEARCH BUILD", 11, Color.rgb(94, 234, 212));
+        eyebrow.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        eyebrow.setLetterSpacing(0.08f);
+        hero.addView(eyebrow);
+
+        TextView title = text("PS3 TRANSLATOR", 27, Color.WHITE);
+        title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        title.setPadding(0, dp(8), 0, dp(3));
+        hero.addView(title);
+
+        TextView subtitle = text("POWERPC  →  ARM64", 14, Color.rgb(147, 197, 253));
+        subtitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        hero.addView(subtitle);
+
+        TextView status = text(nativeStatus(), 14, Color.rgb(226, 232, 240));
+        status.setPadding(dp(12), dp(12), dp(12), dp(12));
+        status.setBackground(roundedBackground(
+            new int[] {Color.rgb(15, 23, 42), Color.rgb(15, 23, 42)}, dp(14)));
+        status.setLineSpacing(dp(3), 1.0f);
+        LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        statusParams.topMargin = dp(18);
+        hero.addView(status, statusParams);
+        layout.addView(hero);
 
         heading("PS3 firmware");
         Button addFirmware = new Button(this);
+        styleButton(addFirmware);
         addFirmware.setText("Choose firmware file (.PUP)");
         addFirmware.setOnClickListener(v -> chooseFirmware());
         layout.addView(addFirmware);
@@ -68,10 +95,12 @@ public final class MainActivity extends Activity {
         TextView firmwareNote = text(
             "Firmware selection is only a UI milestone. This prototype does not install, decrypt, or boot PS3 firmware.",
             13, Color.rgb(255, 205, 130));
+        firmwareNote.setLineSpacing(dp(3), 1.0f);
         layout.addView(firmwareNote);
 
         heading("Games");
         Button addGame = new Button(this);
+        styleButton(addGame);
         addGame.setText("Choose game file");
         addGame.setOnClickListener(v -> chooseGame());
         layout.addView(addGame);
@@ -84,6 +113,7 @@ public final class MainActivity extends Activity {
         layout.addView(selectedGame);
 
         Button launch = new Button(this);
+        styleButton(launch);
         launch.setText("Try launching supported ELF (experimental)");
         launch.setOnClickListener(v -> inspectLaunchSelectedGame());
         layout.addView(launch);
@@ -91,9 +121,11 @@ public final class MainActivity extends Activity {
             "Experimental: attempts a bounded interpreter run only for small, unencrypted ELF64 PowerPC64 files. PKG/SELF games, firmware, OS services and RSX graphics are not implemented.",
             13, Color.rgb(255, 205, 130));
         launchNote.setPadding(0, 4, 0, 8);
+        launchNote.setLineSpacing(dp(3), 1.0f);
         layout.addView(launchNote);
 
         Button elfPipelineTest = new Button(this);
+        styleButton(elfPipelineTest);
         elfPipelineTest.setText("Run built-in ELF execution test");
         elfPipelineTest.setOnClickListener(v -> {
             selectedGame.setText("Running built-in ELF loader + PowerPC interpreter test…");
@@ -109,9 +141,11 @@ public final class MainActivity extends Activity {
             "Runs a tiny executable bundled in the app through the actual native ELF loader and bounded PowerPC interpreter. It checks the launch pipeline only; it is not a PS3 game.",
             13, Color.rgb(255, 205, 130));
         elfPipelineNote.setPadding(0, 4, 0, 8);
+        elfPipelineNote.setLineSpacing(dp(3), 1.0f);
         layout.addView(elfPipelineNote);
 
         Button controller = new Button(this);
+        styleButton(controller);
         controller.setText("Open virtual controller");
         controller.setOnClickListener(v ->
             startActivity(new Intent(this, VirtualControllerActivity.class)));
@@ -120,9 +154,11 @@ public final class MainActivity extends Activity {
             "Touch D-pad, sticks and action buttons. This layout test is not connected to game emulation yet.",
             13, Color.rgb(255, 205, 130));
         controllerNote.setPadding(0, 8, 0, 8);
+        controllerNote.setLineSpacing(dp(3), 1.0f);
         layout.addView(controllerNote);
 
         Button demoGame = new Button(this);
+        styleButton(demoGame);
         demoGame.setText("Run built-in 2D performance test");
         demoGame.setOnClickListener(v ->
             startActivity(new Intent(this, TwoDTestActivity.class)));
@@ -131,9 +167,11 @@ public final class MainActivity extends Activity {
             "This is a small Android test game for checking drawing, touch input and FPS. It is NOT a PS3 game and does not test PS3 compatibility.",
             13, Color.rgb(255, 205, 130));
         demoNote.setPadding(0, 8, 0, 8);
+        demoNote.setLineSpacing(dp(3), 1.0f);
         layout.addView(demoNote);
 
         Button demo3d = new Button(this);
+        styleButton(demo3d);
         demo3d.setText("Run built-in 3D OpenGL test");
         demo3d.setOnClickListener(v ->
             startActivity(new Intent(this, ThreeDTestActivity.class)));
@@ -142,9 +180,11 @@ public final class MainActivity extends Activity {
             "Rotating 3D cube for checking Android OpenGL ES rendering. This is not PS3 graphics emulation.",
             13, Color.rgb(255, 205, 130));
         demo3dNote.setPadding(0, 8, 0, 8);
+        demo3dNote.setLineSpacing(dp(3), 1.0f);
         layout.addView(demo3dNote);
 
         Button graphics = new Button(this);
+        styleButton(graphics);
         graphics.setText("Run graphics translation scaffold");
         graphics.setOnClickListener(v ->
             startActivity(new Intent(this, GraphicsTranslationTestActivity.class)));
@@ -153,6 +193,7 @@ public final class MainActivity extends Activity {
             "Experimental internal CLEAR/DRAW command mapping to OpenGL ES 2.0. This is the first graphics-pipeline scaffold, not a PS3 RSX decoder.",
             13, Color.rgb(255, 205, 130));
         graphicsNote.setPadding(0, 8, 0, 8);
+        graphicsNote.setLineSpacing(dp(3), 1.0f);
         layout.addView(graphicsNote);
 
         heading("Performance settings");
@@ -206,8 +247,40 @@ public final class MainActivity extends Activity {
 
         TextView caveat = text("This is not yet a PS3 emulator. The experimental launch path only loads a small unencrypted ELF into a bounded guest-memory model and interprets a tiny PowerPC subset. PKG/SELF decryption, installation, relocations, imports, stack/process setup, firmware, SPU and RSX are not implemented. No real PS3 game has booted.", 13, Color.LTGRAY);
         caveat.setPadding(0, 18, 0, 0);
+        caveat.setLineSpacing(dp(3), 1.0f);
+        caveat.setBackground(roundedBackground(new int[] {Color.rgb(23, 31, 48), Color.rgb(23, 31, 48)}, dp(14)));
+        caveat.setPadding(dp(14), dp(14), dp(14), dp(14));
         layout.addView(caveat);
         setContentView(scroll);
+    }
+
+    private int dp(float value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private android.graphics.drawable.GradientDrawable roundedBackground(int[] colors, int radius) {
+        android.graphics.drawable.GradientDrawable drawable =
+            new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR, colors);
+        drawable.setCornerRadius(radius);
+        return drawable;
+    }
+
+    private void styleButton(Button button) {
+        button.setAllCaps(false);
+        button.setTextColor(Color.rgb(8, 20, 37));
+        button.setTextSize(15);
+        button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        button.setPadding(dp(16), dp(12), dp(16), dp(12));
+        button.setMinHeight(dp(52));
+        button.setBackground(roundedBackground(
+            new int[] {Color.rgb(94, 234, 212), Color.rgb(56, 189, 248)}, dp(16)));
+        button.setElevation(dp(2));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.topMargin = dp(5);
+        params.bottomMargin = dp(5);
+        button.setLayoutParams(params);
     }
 
     private TextView text(String value, int size, int color) {
@@ -215,13 +288,24 @@ public final class MainActivity extends Activity {
         view.setText(value);
         view.setTextSize(size);
         view.setTextColor(color);
+        view.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        view.setLineSpacing(dp(2), 1.0f);
         return view;
     }
 
     private void heading(String value) {
-        TextView view = text(value, 20, Color.WHITE);
-        view.setPadding(0, 18, 0, 8);
+        TextView view = text(value.toUpperCase(java.util.Locale.ROOT), 14,
+            Color.rgb(125, 211, 252));
+        view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        view.setLetterSpacing(0.07f);
+        view.setPadding(0, dp(24), 0, dp(8));
         layout.addView(view);
+        android.view.View divider = new android.view.View(this);
+        divider.setBackgroundColor(Color.rgb(42, 58, 82));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
+        params.bottomMargin = dp(8);
+        layout.addView(divider, params);
     }
 
     private void chooseGame() {
