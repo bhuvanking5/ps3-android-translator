@@ -171,7 +171,7 @@ int main(void) {
 
     ps3_guest_memory_init(&memory);
     file[31] = 0x80u; /* entry outside the executable PT_LOAD segment */
-    CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
+    CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x10000u,
         sizeof(ram), &entry) == PS3_GUEST_ELF_BAD_FORMAT);
     CHECK(memory.count == 0u);
 
