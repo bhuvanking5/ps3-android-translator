@@ -43,3 +43,26 @@ The official build instructions require a full Android toolchain and describe a 
 ## Decision
 
 For the user's immediate goal, test the official legacy APK first. For this repository, prioritize verified loader/runtime tests and compatibility research; do not advertise it as game-capable until a real game is demonstrated working.
+
+## Verified upstream release details (checked 2026-10-17)
+
+The official GitHub API identifies **ARMSX3 1.2**, published 2026-10-16, as the latest release at the time of this check: [official release 1.2](https://github.com/ARMSX2/ARMSX3/releases/tag/1.2). It provides these four Android APK variants:
+
+- [Android 11 / ARMv8.2 build](https://github.com/ARMSX2/ARMSX3/releases/download/1.2/ARMSX3-1.2-a11-armv8.2-sdk30.apk)
+- [Android 13 / ARMv8.2 build](https://github.com/ARMSX2/ARMSX3/releases/download/1.2/ARMSX3-1.2-a13-armv8.2-sdk33.apk)
+- [Android 15 / ARMv8.2 build](https://github.com/ARMSX2/ARMSX3/releases/download/1.2/ARMSX3-1.2-a15-armv8.2-sdk35.apk)
+- [Legacy ARMv8.1 / Android 11 build](https://github.com/ARMSX2/ARMSX3/releases/download/1.2/ARMSX3-1.2-legacy-armv8.1-sdk30.apk)
+
+For an Android 11 phone, the legacy APK is the conservative compatibility attempt; the ARMv8.2 Android 11 build may be tested only if the device supports its CPU instruction requirements. Neither choice guarantees that games will run acceptably on a Snapdragon 665.
+
+## Compatibility target: 60–70 games
+
+Treat 60–70 games as a **long-term validation target**, not a current capability or a promise. The correct sequence is:
+
+1. Establish one game that reaches actual gameplay on the target device.
+2. Record the exact emulator release, device, firmware setup, game version, boot result, gameplay result, crashes, and measured performance.
+3. Repeat with legally owned titles and classify each as **boots**, **reaches gameplay**, **playable**, or **completable**. Do not count a title as end-to-end playable merely because it reaches a menu.
+4. Grow the tested list toward 60–70 only as real results are collected.
+
+Our own prototype's green CI runs test the prototype's narrow synthetic cases only. They are not evidence of PS3 game compatibility. The major strategic step is to build on a complete emulator core such as ARMSX3/RPCS3, not to inflate the prototype's instruction count and claim that it can run commercial games.
+
