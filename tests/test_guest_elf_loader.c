@@ -55,8 +55,8 @@ int main(void) {
     CHECK(memory.count == 1u);
     CHECK(ram[0] == 0x38u && ram[1] == 0x60u &&
           ram[2] == 0x00u && ram[3] == 0x07u);
-    CHECK(ram[28] == 0x48u && ram[29] == 0u &&
-          ram[30] == 0u && ram[31] == 0u);
+    CHECK(ram[28] == 0x4eu && ram[29] == 0x80u &&
+          ram[30] == 0u && ram[31] == 0x20u);
     CHECK(ram[32] == 0u && ram[33] == 0u &&
           ram[34] == 0u && ram[35] == 0u);
     uint32_t word = 0u;
