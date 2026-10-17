@@ -58,7 +58,7 @@ int main(void) {
     CHECK(!ps3_guest_memory_write32(&memory, 0x1000u, 1u));
 
     ps3_guest_memory_init(&memory);
-    file[68] = 4u; /* read-only segment: entry is not executable */
+    file[71] = 4u; /* read-only segment: entry is not executable */
     CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
         sizeof(ram), &entry) == PS3_GUEST_ELF_BAD_FORMAT);
     CHECK(memory.count == 0u);
