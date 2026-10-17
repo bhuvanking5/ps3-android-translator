@@ -282,6 +282,47 @@ int main(void) {
     CHECK(memory.count == 1u);
     CHECK(ram[0] == 0xa5u && ram[15] == 0xa5u);
 
+
+    /* Dynamic ELF must not enter the current native runner before relocations
+       and imports are supported. Reject it before changing guest RAM or maps. */
+    uint8_t dynamic_file[208] = {0};
+    memcpy(dynamic_file, "\x7f""ELF", 4);
+    dynamic_file[4] = 2u; dynamic_file[5] = 2u; dynamic_file[6] = 1u;
+    put16(dynamic_file + 16, 2u); put16(dynamic_file + 18, 21u);
+    put32(dynamic_file + 20, 1u);
+    put64(dynamic_file + 24, 0x10000u); put64(dynamic_file + 32, 64u);
+    put16(dynamic_file + 52, 64u); put16(dynamic_file + 54, 56u);
+    put16(dynamic_file + 56, 2u);
+    put32(dynamic_file + 64, 2u); /* PT_DYNAMIC appears first deliberately. */
+    put64(dynamic_file + 72, 192u); put64(dynamic_file + 80, 0x10010u);
+    put64(dynamic_file + 96, 16u); put64(dynamic_file + 104, 16u);
+    put32(dynamic_file + 120, 1u); put32(dynamic_file + 124, 5u);
+    put64(dynamic_file + 128, 176u); put64(dynamic_file + 136, 0x10000u);
+    put64(dynamic_file + 144, 0x10000u); put64(dynamic_file + 152, 16u);
+    put64(dynamic_file + 160, 16u); put64(dynamic_file + 168, 4u);
+    put32(dynamic_file + 176, 0x38600007u);
+    put32(dynamic_file + 180, 0x38800005u);
+    put32(dynamic_file + 184, 0x7ca32214u);
+    put32(dynamic_file + 188, 0x4e800020u);
+    memset(ram, 0xa5, sizeof(ram));
+    ps3_guest_memory_init(&memory);
+    ps3_guest_elf_status dynamic_status = ps3_guest_elf_load(dynamic_file,
+        sizeof(dynamic_file), &memory, ram, 0x10000u, sizeof(ram), &entry);
+    CHECK(dynamic_status == PS3_GUEST_ELF_RELOCATION_REQUIRED);
+    CHECK(memory.count == 0u);
+    CHECK(ram[0] == 0xa5u && ram[15] == 0xa5u);
+
+    /* ET_DYN also requires load-bias/relocation support even without PT_DYNAMIC. */
+    put16(dynamic_file + 16, 3u);
+    put16(dynamic_file + 56, 1u);
+    memset(ram, 0xa5, sizeof(ram));
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_elf_load(dynamic_file, sizeof(dynamic_file), &memory,
+        ram, 0x10000u, sizeof(ram), &entry) ==
+        PS3_GUEST_ELF_RELOCATION_REQUIRED);
+    CHECK(memory.count == 0u);
+    CHECK(ram[0] == 0xa5u && ram[15] == 0xa5u);
+
     puts("Native ELF loader and entry-point execution tests passed.");
     return 0;
 }
