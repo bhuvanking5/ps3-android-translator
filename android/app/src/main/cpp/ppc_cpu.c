@@ -1,8 +1,9 @@
 #include "ppc_cpu.h"
 
-ppc_cpu_status ppc_cpu_run_with_read32(
+ppc_cpu_status ppc_cpu_run_with_memory(
     const uint32_t *instructions, size_t count, uint64_t registers[32],
-    ppc_cpu_read32_fn read32, void *read_context) {
+    ppc_cpu_read32_fn read32, ppc_cpu_write32_fn write32,
+    void *memory_context) {
     if (instructions == 0 || registers == 0) return PPC_CPU_INVALID_ARGUMENT;
     if (count == 0u || count > PPC_CPU_MAX_INSTRUCTIONS)
         return PPC_CPU_INSTRUCTION_LIMIT;
@@ -59,9 +60,16 @@ ppc_cpu_status ppc_cpu_run_with_read32(
             const uint64_t base = (ra == 0u) ? 0u : registers[ra];
             const uint32_t address = (uint32_t)(base + (uint64_t)displacement);
             uint32_t value = 0u;
-            if (!read32(read_context, address, &value))
+            if (!read32(memory_context, address, &value))
                 return PPC_CPU_MEMORY_ACCESS_ERROR;
             registers[rt] = (uint64_t)value;
+        } else if (opcode == 36u) { /* STW: callback-backed 32-bit guest write */
+            if (write32 == 0) return PPC_CPU_MEMORY_ACCESS_ERROR;
+            const int32_t displacement = (int16_t)(ins & 0xffffu);
+            const uint64_t base = (ra == 0u) ? 0u : registers[ra];
+            const uint32_t address = (uint32_t)(base + (uint64_t)displacement);
+            if (!write32(memory_context, address, (uint32_t)registers[rt]))
+                return PPC_CPU_MEMORY_ACCESS_ERROR;
         } else if (opcode == 15u) { /* ADDIS: signed immediate shifted left 16 */
             const int64_t imm = (int64_t)(int16_t)(ins & 0xffffu) * 65536;
             const uint64_t base = (ra == 0u) ? 0u : registers[ra];
@@ -94,7 +102,14 @@ ppc_cpu_status ppc_cpu_run_with_read32(
     return PPC_CPU_OK;
 }
 
+ppc_cpu_status ppc_cpu_run_with_read32(
+    const uint32_t *instructions, size_t count, uint64_t registers[32],
+    ppc_cpu_read32_fn read32, void *read_context) {
+    return ppc_cpu_run_with_memory(instructions, count, registers,
+        read32, 0, read_context);
+}
+
 ppc_cpu_status ppc_cpu_run(const uint32_t *instructions, size_t count,
                            uint64_t registers[32]) {
-    return ppc_cpu_run_with_read32(instructions, count, registers, 0, 0);
+    return ppc_cpu_run_with_memory(instructions, count, registers, 0, 0, 0);
 }
