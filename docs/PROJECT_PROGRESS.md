@@ -49,3 +49,18 @@ This is a useful device-side smoke test for the JNI → ELF loader → guest mem
 The bounded native PowerPC interpreter and experimental AArch64 translator now include ORIS and XORIS (opcodes 25 and 27) alongside ORI/XORI. These instructions shift the 16-bit immediate left by 16 before applying OR/XOR. Regression tests cover the C reference interpreter, Python reference decoder/execution, translation acceptance, and the native ARM64 differential test path.
 
 This remains a narrow instruction-subset improvement. It does not add full PPU semantics, dynamic block caching, PS3 system services, SPU/RSX support, or real-game compatibility.
+
+
+## Read-only PKG/ISO signature inspector (2026-10-17)
+
+Added `tools/inspect_ps3_container.py` and unit tests for bounded signature
+recognition of PKG magic, ELF magic, ISO 9660 volume descriptors, and basic
+UDF recognition/anchor signatures. This makes file identification testable
+without pretending a recognized header means a game can run. The inspector is
+a host-side diagnostic and is not yet connected to the Android app.
+
+The tool does not extract/install PKG files, traverse ISO/UDF directories,
+decrypt protected content, locate an executable, or launch a game. The project
+still has **zero confirmed real-game boots**. Next container milestone is
+bounds-checked directory and package metadata parsing, followed by loading a
+supported unencrypted homebrew executable through a proper process runtime.
