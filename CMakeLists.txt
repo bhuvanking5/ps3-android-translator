@@ -126,3 +126,14 @@ target_include_directories(test_ppc_guest_memory PRIVATE
 )
 target_compile_options(test_ppc_guest_memory PRIVATE -Wall -Wextra -Werror)
 add_test(NAME ppc_guest_memory_integration COMMAND test_ppc_guest_memory)
+
+add_executable(test_guest_elf_loader
+  tests/test_guest_elf_loader.c
+  android/app/src/main/cpp/guest_elf_loader.c
+  android/app/src/main/cpp/guest_memory.c
+)
+target_include_directories(test_guest_elf_loader PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_guest_elf_loader PRIVATE -Wall -Wextra -Werror)
+add_test(NAME native_guest_elf_loader COMMAND test_guest_elf_loader)
