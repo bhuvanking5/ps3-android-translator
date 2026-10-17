@@ -34,6 +34,10 @@ ppc_cpu_status ppc_cpu_run_with_read32(
     const uint32_t *instructions, size_t count, uint64_t registers[32],
     ppc_cpu_read32_fn read32, void *read_context);
 
+/* Runs a bounded subset directly from executable guest memory at entry_point. */
+ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
+    uint64_t registers[32], size_t max_steps, size_t *steps_executed);
+
 /* Guest loads/stores use callbacks; the interpreter never dereferences guest addresses. */
 ppc_cpu_status ppc_cpu_run_with_memory(
     const uint32_t *instructions, size_t count, uint64_t registers[32],
