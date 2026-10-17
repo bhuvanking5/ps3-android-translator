@@ -9,6 +9,7 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
         return PPC_CPU_INVALID_ARGUMENT;
     uint32_t pc = entry_point;
     uint64_t lr = UINT64_MAX; /* Synthetic top-level return sentinel. */
+    uint64_t ctr = 0u;
     uint8_t condition[8] = {0};
     size_t steps = 0u;
     while (steps < max_steps) {
@@ -37,7 +38,8 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             const unsigned xo = (ins >> 1) & 0x3ffu;
             const unsigned bo = (ins >> 21) & 31u;
             const unsigned bi = (ins >> 16) & 31u;
-            if (xo != 16u || (ins & 0x0000e000u) != 0u ||
+            if ((xo != 16u && xo != 528u) ||
+                (ins & 0x0000e000u) != 0u ||
                 (bo != 20u && bo != 12u && bo != 4u)) {
                 if (steps_executed != 0) *steps_executed = steps;
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
@@ -49,11 +51,11 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
                 take = bo == 12u ? cr_bit != 0u : cr_bit == 0u;
             }
             if (take) {
-                if (lr == UINT64_MAX) {
+                if (xo == 16u && lr == UINT64_MAX) {
                     if (steps_executed != 0) *steps_executed = steps;
                     return PPC_CPU_GUEST_EXIT;
                 }
-                next_pc = (uint32_t)(lr & ~UINT64_C(3));
+                next_pc = (uint32_t)((xo == 16u ? lr : ctr) & ~UINT64_C(3));
                 if ((ins & 1u) != 0u) lr = (uint64_t)(pc + 4u);
             }
         } else if (opcode == 16u) {
@@ -119,6 +121,8 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             const unsigned spr = (((ins >> 11) & 31u) << 5) | ((ins >> 16) & 31u);
             if (xo == 339u && spr == 8u) registers[rt] = lr;       /* mflr */
             else if (xo == 467u && spr == 8u) lr = registers[rt]; /* mtlr */
+            else if (xo == 339u && spr == 9u) registers[rt] = ctr; /* mfctr */
+            else if (xo == 467u && spr == 9u) ctr = registers[rt]; /* mtctr */
             else if (xo == 266u) registers[rt] = registers[ra] + registers[rb];
             else if (xo == 40u) registers[rt] = registers[rb] - registers[ra];
             else if (xo == 233u) registers[rt] = registers[ra] * registers[rb];
