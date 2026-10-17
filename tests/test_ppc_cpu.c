@@ -130,6 +130,12 @@ int main(void) {
 
     CHECK(ppc_cpu_run(program, 0, gpr) == PPC_CPU_INSTRUCTION_LIMIT);
     CHECK(ppc_cpu_run(program, PPC_CPU_MAX_INSTRUCTIONS + 1u, gpr) == PPC_CPU_INSTRUCTION_LIMIT);
+    /* Record-form X instructions require CR updates that are not implemented. */
+    const uint32_t record_add[] = { xo(5, 3, 4, 266) | 1u };
+    CHECK(ppc_cpu_run(record_add, 1, gpr) == PPC_CPU_UNSUPPORTED_INSTRUCTION);
+    const uint32_t record_or[] = { xo(5, 3, 4, 444) | 1u };
+    CHECK(ppc_cpu_run(record_or, 1, gpr) == PPC_CPU_UNSUPPORTED_INSTRUCTION);
+
     const uint32_t unsupported[] = { 0u };
     CHECK(ppc_cpu_run(unsupported, 1, gpr) == PPC_CPU_UNSUPPORTED_INSTRUCTION);
     CHECK(ppc_cpu_run(NULL, 1, gpr) == PPC_CPU_INVALID_ARGUMENT);
