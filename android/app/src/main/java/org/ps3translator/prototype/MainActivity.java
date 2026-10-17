@@ -93,6 +93,24 @@ public final class MainActivity extends Activity {
         launchNote.setPadding(0, 4, 0, 8);
         layout.addView(launchNote);
 
+        Button elfPipelineTest = new Button(this);
+        elfPipelineTest.setText("Run built-in ELF execution test");
+        elfPipelineTest.setOnClickListener(v -> {
+            selectedGame.setText("Running built-in ELF loader + PowerPC interpreter test…");
+            new Thread(() -> {
+                final String result = nativeRunBuiltinElfTest();
+                runOnUiThread(() -> selectedGame.setText(
+                    "Built-in ELF pipeline test:\\n" + result
+                    + "\\nExpected arithmetic result: r3=7, r4=5, r5=12 (0xc)."));
+            }, "ps3-builtin-elf-test").start();
+        });
+        layout.addView(elfPipelineTest);
+        TextView elfPipelineNote = text(
+            "Runs a tiny executable bundled in the app through the actual native ELF loader and bounded PowerPC interpreter. It checks the launch pipeline only; it is not a PS3 game.",
+            13, Color.rgb(255, 205, 130));
+        elfPipelineNote.setPadding(0, 4, 0, 8);
+        layout.addView(elfPipelineNote);
+
         Button controller = new Button(this);
         controller.setText("Open virtual controller");
         controller.setOnClickListener(v ->
@@ -401,6 +419,7 @@ public final class MainActivity extends Activity {
 
     private static native String nativeStatus();
     private static native String nativeRunSelectedElf(byte[] fileBytes);
+    private static native String nativeRunBuiltinElfTest();
 
     static {
         System.loadLibrary("translator_bridge");
