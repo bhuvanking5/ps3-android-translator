@@ -86,10 +86,14 @@ ppc_cpu_status ppc_cpu_run_with_memory(
             const int64_t imm = (int16_t)(ins & 0xffffu);
             const uint64_t base = (ra == 0u) ? 0u : registers[ra];
             registers[rt] = base + (uint64_t)imm;
-        } else if (opcode == 24u) { /* ORI: zero-extended immediate */
-            registers[ra] = registers[rt] | (uint64_t)(ins & 0xffffu);
-        } else if (opcode == 26u) { /* XORI: zero-extended immediate */
-            registers[ra] = registers[rt] ^ (uint64_t)(ins & 0xffffu);
+        } else if (opcode == 24u || opcode == 25u) { /* ORI / ORIS */
+            const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
+                                       (opcode == 25u ? 16u : 0u);
+            registers[ra] = registers[rt] | immediate;
+        } else if (opcode == 26u || opcode == 27u) { /* XORI / XORIS */
+            const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
+                                       (opcode == 27u ? 16u : 0u);
+            registers[ra] = registers[rt] ^ immediate;
         } else if (opcode == 28u) { /* ANDI.: logical immediate, updates CR0 */
             const uint64_t value = registers[rt] & (uint64_t)(ins & 0xffffu);
             registers[ra] = value;
