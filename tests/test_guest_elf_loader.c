@@ -609,6 +609,31 @@ int main(void) {
         indexed_data[2] == 0x56u && indexed_data[3] == 0x78u &&
         indexed_data[6] == 0x56u && indexed_data[7] == 0x78u);
 
+    /* PPC64 EXTSW and CNTLZW cover common sign-extension/bit-scan patterns. */
+    uint8_t word_ops_code[20] = {0};
+    put32(word_ops_code + 0, (31u << 26) | (3u << 21) | (4u << 16) |
+        (986u << 1)); /* extsw r4,r3 */
+    put32(word_ops_code + 4, (31u << 26) | (5u << 21) | (6u << 16) |
+        (26u << 1)); /* cntlzw r6,r5 */
+    put32(word_ops_code + 8, (31u << 26) | (7u << 21) | (8u << 16) |
+        (26u << 1)); /* cntlzw r8,r7 */
+    put32(word_ops_code + 12, (31u << 26) | (9u << 21) | (10u << 16) |
+        (26u << 1)); /* cntlzw r10,r9 */
+    put32(word_ops_code + 16, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5700u, sizeof(word_ops_code),
+        word_ops_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = UINT64_C(0x00000000f1234567);
+    registers[5] = 0x00000001u;
+    registers[7] = 0x80000000u;
+    registers[9] = 0u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5700u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[4] == UINT64_C(0xfffffffff1234567));
+    CHECK(registers[6] == 31u && registers[8] == 0u && registers[10] == 32u);
+
     puts("Native ELF loader and entry-point execution tests passed.");
     return 0;
 }
