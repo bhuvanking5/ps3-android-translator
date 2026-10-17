@@ -44,7 +44,7 @@ def make_dynamic_elf():
 
     entries = [
         (5, 0x1180),   # DT_STRTAB
-        (10, 13),      # DT_STRSZ
+        (10, 14),      # DT_STRSZ
         (1, 1),        # DT_NEEDED, offset 1
         (7, 0x11A0),   # DT_RELA
         (8, 24),       # DT_RELASZ
