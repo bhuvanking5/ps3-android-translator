@@ -64,3 +64,12 @@ decrypt protected content, locate an executable, or launch a game. The project
 still has **zero confirmed real-game boots**. Next container milestone is
 bounds-checked directory and package metadata parsing, followed by loading a
 supported unencrypted homebrew executable through a proper process runtime.
+
+
+The Android selected-file path was also updated to scan standard volume-descriptor
+locations for ISO 9660/UDF signatures after the quick ELF/PKG/SELF checks. It
+now gives a specific “signature detected, not launched” diagnostic for those
+disc formats instead of treating all such files as unknown. The scan is
+bounded to 32 sectors beginning at logical sector 16; it does not mount the
+image, traverse directories, or execute content. Android build/CI must pass
+before this change is considered validated.
