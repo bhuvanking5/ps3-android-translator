@@ -105,7 +105,7 @@ int main(void) {
         addi(3, 0, 0x1234), addi(4, 0, 8), addi(5, 0, 0),
         rlwnm(3, 6, 4, 0, 31),       /* rotate left by 8 */
         rlwnm(3, 7, 5, 16, 31),      /* zero shift, keep low 16 bits */
-        addi(8, 0, 36),
+        addi(8, 0, 40),
         rlwnm(3, 9, 8, 0, 31)        /* only low five shift bits are used */
     };
     CHECK(ppc_cpu_run(rotate_mask_register, 7, gpr) == PPC_CPU_OK);
