@@ -177,8 +177,7 @@ ps3_guest_dynamic_status ps3_guest_elf_parse_rela(
         return PS3_GUEST_DYNAMIC_BAD_FORMAT;
     }
     if ((have_symtab != have_syment) ||
-        (have_strtab != have_strsz) ||
-        (have_strtab && !file_range_ok(file_size, string_table_address, 0u))) {
+        (have_strtab != have_strsz)) {
         return PS3_GUEST_DYNAMIC_BAD_FORMAT;
     }
     if (have_strtab) {
