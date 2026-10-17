@@ -39,13 +39,15 @@ def make_dynamic_elf():
     put32(data, 120, 2)
     put64(data, 128, 0x100)
     put64(data, 136, 0x1100)
-    put64(data, 152, 7 * 16)
-    put64(data, 160, 7 * 16)
+    put64(data, 152, 9 * 16)
+    put64(data, 160, 9 * 16)
 
     entries = [
         (5, 0x1180),   # DT_STRTAB
         (10, 14),      # DT_STRSZ
         (1, 1),        # DT_NEEDED, offset 1
+        (6, 0x11C0),   # DT_SYMTAB
+        (11, 24),      # DT_SYMENT
         (7, 0x11A0),   # DT_RELA
         (8, 24),       # DT_RELASZ
         (9, 24),       # DT_RELAENT
@@ -56,6 +58,8 @@ def make_dynamic_elf():
     data[0x180:0x18E] = b"\0libc_stub.so\0"
     # One big-endian Elf64_Rela: target 0x2000, symbol 3, type 22, addend -4.
     struct.pack_into(">QQq", data, 0x1A0, 0x2000, (3 << 32) | 22, -4)
+    # Dynamic symbol 3 is an undefined imported function named libc_stub.so.
+    struct.pack_into(">IBBHQQ", data, 0x1C0 + 3 * 24, 1, 0x12, 0, 0, 0, 0)
     return data
 
 
@@ -68,8 +72,11 @@ class DynamicELFInspectionTests(unittest.TestCase):
         self.assertEqual(result["relocation_metadata"]["DT_RELA"], 0x11A0)
         self.assertEqual(result["relocation_metadata"]["DT_RELASZ"], 24)
         self.assertEqual(result["relocations"]["DT_RELA"], [
-            {"offset": 0x2000, "symbol_index": 3, "type": 22, "addend": -4}
+            {"offset": 0x2000, "symbol_index": 3, "type": 22, "addend": -4,
+             "symbol": "libc_stub.so", "undefined_import": True}
         ])
+        self.assertEqual(result["referenced_symbols"][3]["binding"], 1)
+        self.assertTrue(result["referenced_symbols"][3]["undefined_import"])
         self.assertIn("never applied", result["limitations"])
 
     def test_rejects_truncated_program_header_table(self):
