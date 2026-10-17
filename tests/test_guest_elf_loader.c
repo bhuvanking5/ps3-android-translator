@@ -345,7 +345,7 @@ int main(void) {
     uint8_t dynamic_elf[512] = {0};
     uint8_t dynamic_ram[512];
     int import_calls = 0;
-    memcpy(dynamic_elf, "\\x7f" "ELF", 4u);
+    memcpy(dynamic_elf, "\x7f" "ELF", 4u);
     dynamic_elf[4] = 2u; dynamic_elf[5] = 2u; dynamic_elf[6] = 1u;
     put16(dynamic_elf + 16, 2u); put16(dynamic_elf + 18, 21u);
     put32(dynamic_elf + 20, 1u);
