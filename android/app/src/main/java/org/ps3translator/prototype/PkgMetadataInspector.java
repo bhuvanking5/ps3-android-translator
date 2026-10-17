@@ -106,8 +106,9 @@ final class PkgMetadataInspector {
         }
         if (metadataOffset < HEADER_BYTES || metadataOffset > totalSize
                 || metadataSize > totalSize - metadataOffset
-                || metadataSize > MAX_METADATA_BYTES || metadataCount > MAX_ITEM_COUNT) {
-            throw new IOException("Metadata bounds or safety limits are invalid.");
+                || metadataSize > MAX_METADATA_BYTES || metadataCount > MAX_ITEM_COUNT
+                || metadataCount > metadataSize / 8L) {
+            throw new IOException("Metadata bounds, record count, or safety limits are invalid.");
         }
         if (itemCount > MAX_ITEM_COUNT || dataOffset > totalSize
                 || dataSize > totalSize - dataOffset) {
