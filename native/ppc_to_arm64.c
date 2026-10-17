@@ -257,15 +257,16 @@ ppc_to_arm64_status ppc_translate_to_arm64(
             continue;
         }
 
-        if (opcode == 24u || opcode == 26u) {
+        if (opcode == 24u || opcode == 25u || opcode == 26u || opcode == 27u) {
             /* ORI/XORI: RT is the source register; RA is the destination. */
             const unsigned immediate = ins & 0xffffu;
-            const uint32_t logical_base = opcode == 24u ? 0xAA000000u
-                                                         : 0xCA000000u;
+            const int shifted = opcode == 25u || opcode == 27u;
+            const uint32_t logical_base = (opcode == 24u || opcode == 25u) ? 0xAA000000u : 0xCA000000u;
+            const uint32_t immediate_move = shifted ? (0xD2A00000u | (immediate << 5) | SCRATCH_B) : movz(SCRATCH_B, immediate);
             if (!emit_gpr_load(output, output_capacity, &used,
                                SCRATCH_A, rt) ||
                 !emit(output, output_capacity, &used,
-                      movz(SCRATCH_B, immediate)) ||
+                      immediate_move) ||
                 !emit(output, output_capacity, &used,
                       logical_reg(logical_base, SCRATCH_A,
                                   SCRATCH_A, SCRATCH_B)) ||
