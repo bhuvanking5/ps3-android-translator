@@ -32,6 +32,18 @@ def decode_word(word):
             immediate -= 0x10000
         return {"mnemonic": "addi", "rt": rt, "ra": ra, "immediate": immediate}
 
+    # addis RT, RA, SI — signed immediate shifted left by 16.
+    if opcode == 15:
+        immediate = word & 0xFFFF
+        if immediate & 0x8000:
+            immediate -= 0x10000
+        return {
+            "mnemonic": "addis",
+            "rt": (word >> 21) & 0x1F,
+            "ra": (word >> 16) & 0x1F,
+            "immediate": immediate,
+        }
+
     # Logical immediates: RT is source, RA is destination.
     if opcode in (24, 25, 26, 27):
         mnemonics = {24: "ori", 25: "oris", 26: "xori", 27: "xoris"}
