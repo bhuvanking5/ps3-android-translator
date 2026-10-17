@@ -232,6 +232,23 @@ int main(void) {
     CHECK(registers[8] == 0x00012340u);
     CHECK(registers[9] == 0x00000123u);
 
+    /* ANDI. in the actual guest runner must update CR0 for a following branch. */
+    uint8_t andi_branch_code[24] = {0};
+    put32(andi_branch_code + 0, 0x38600008u); /* addi r3,0,8 */
+    put32(andi_branch_code + 4, (28u << 26) | (3u << 21) | (4u << 16) | 3u); /* andi. r4,r3,3 => zero */
+    put32(andi_branch_code + 8, 0x41820008u); /* beq cr0,+8 */
+    put32(andi_branch_code + 12, 0x38A00063u); /* addi r5,0,99 (must be skipped) */
+    put32(andi_branch_code + 16, 0x38A0000Cu); /* addi r5,0,12 */
+    put32(andi_branch_code + 20, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5000u, sizeof(andi_branch_code),
+        andi_branch_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5000u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[4] == 0u && registers[5] == 12u);
+
     /* Fetching from unmapped/non-executable memory must fail safely. */
     ps3_guest_memory_init(&memory);
     steps = 99u;
