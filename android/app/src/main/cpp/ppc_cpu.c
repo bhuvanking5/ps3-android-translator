@@ -90,6 +90,11 @@ ppc_cpu_status ppc_cpu_run_with_memory(
             registers[ra] = registers[rt] | (uint64_t)(ins & 0xffffu);
         } else if (opcode == 26u) { /* XORI: zero-extended immediate */
             registers[ra] = registers[rt] ^ (uint64_t)(ins & 0xffffu);
+        } else if (opcode == 28u) { /* ANDI.: logical immediate, updates CR0 */
+            const uint64_t value = registers[rt] & (uint64_t)(ins & 0xffffu);
+            registers[ra] = value;
+            /* The 16-bit immediate makes the result non-negative: EQ if zero, GT otherwise. */
+            condition[0] = value == 0u ? 2u : 4u;
         } else if (opcode == 31u) {
             /* Rc=1 requires CR0 updates, which this subset does not implement. */
             if ((ins & 1u) != 0u) return PPC_CPU_UNSUPPORTED_INSTRUCTION;
