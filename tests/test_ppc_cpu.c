@@ -117,12 +117,12 @@ int main(void) {
     memset(gpr, 0, sizeof(gpr));
     const uint32_t shift_words[] = {
         addi(3, 0, 0x1234), addi(4, 0, 4),
-        xo(5, 3, 4, 24),       /* slw r5,r3,r4 */
-        xo(6, 3, 4, 536),      /* srw r6,r3,r4 */
+        xo(3, 5, 4, 24),       /* slw r5,r3,r4 */
+        xo(3, 6, 4, 536),      /* srw r6,r3,r4 */
         addi(7, 0, 32),
-        xo(8, 3, 7, 24),       /* shift count 32 => zero */
+        xo(3, 8, 7, 24),       /* shift count 32 => zero */
         addi(9, 0, 36),
-        xo(10, 3, 9, 536)      /* low six bits 36 => zero */
+        xo(3, 10, 9, 536)      /* low six bits 36 => zero */
     };
     CHECK(ppc_cpu_run(shift_words, 8, gpr) == PPC_CPU_OK);
     CHECK(gpr[5] == 0x12340u);
