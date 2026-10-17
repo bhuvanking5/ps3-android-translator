@@ -88,7 +88,7 @@ class DynamicELFInspectionTests(unittest.TestCase):
     def test_rejects_dynamic_table_without_null_terminator(self):
         data = make_dynamic_elf()
         # Replace the final DT_NULL with a non-null tag.
-        struct.pack_into(">qQ", data, 0x100 + 6 * 16, 99, 0)
+        struct.pack_into(">qQ", data, 0x100 + 8 * 16, 99, 0)
         with self.assertRaisesRegex(ELFInspectionError, "DT_NULL"):
             inspect_dynamic_elf(bytes(data))
 
@@ -100,13 +100,13 @@ class DynamicELFInspectionTests(unittest.TestCase):
 
     def test_rejects_relocation_table_outside_file_backed_load_segment(self):
         data = make_dynamic_elf()
-        struct.pack_into(">qQ", data, 0x100 + 3 * 16, 7, 0x1FFF)
+        struct.pack_into(">qQ", data, 0x100 + 5 * 16, 7, 0x1FFF)
         with self.assertRaisesRegex(ELFInspectionError, "dynamic pointer"):
             inspect_dynamic_elf(bytes(data))
 
     def test_rejects_wrong_rela_entry_size(self):
         data = make_dynamic_elf()
-        struct.pack_into(">qQ", data, 0x100 + 5 * 16, 9, 16)
+        struct.pack_into(">qQ", data, 0x100 + 7 * 16, 9, 16)
         with self.assertRaisesRegex(ELFInspectionError, "entry size"):
             inspect_dynamic_elf(bytes(data))
 
