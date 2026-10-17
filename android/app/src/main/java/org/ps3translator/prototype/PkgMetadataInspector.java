@@ -8,6 +8,8 @@ import android.provider.OpenableColumns;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -29,10 +31,13 @@ final class PkgMetadataInspector {
         final long dataOffset;
         final long dataSize;
         final String contentId;
+        final List<MetadataEntry> metadataEntries;
+        final int metadataTrailingBytes;
 
         Info(int revision, int type, long metadataOffset, long metadataCount,
              long metadataSize, long itemCount, long totalSize, long dataOffset,
-             long dataSize, String contentId) {
+             long dataSize, String contentId, List<MetadataEntry> metadataEntries,
+             int metadataTrailingBytes) {
             this.revision = revision;
             this.type = type;
             this.metadataOffset = metadataOffset;
@@ -43,7 +48,22 @@ final class PkgMetadataInspector {
             this.dataOffset = dataOffset;
             this.dataSize = dataSize;
             this.contentId = contentId;
+            this.metadataEntries = metadataEntries;
+            this.metadataTrailingBytes = metadataTrailingBytes;
         }
+    }
+
+    static final class MetadataEntry {
+        final long id;
+        final long size;
+        final byte[] value;
+
+        MetadataEntry(long id, long size, byte[] value) {
+            this.id = id;
+            this.size = size;
+            this.value = value;
+        }
+    }
     }
 
     private PkgMetadataInspector() {}
@@ -95,8 +115,38 @@ final class PkgMetadataInspector {
             throw new IOException("Package data bounds or safety limits are invalid.");
         }
         String contentId = ascii(h, 0x30, 0x30);
+        byte[] metadata = readAt(resolver, uri, metadataOffset, (int) metadataSize, fileSize);
+        List<MetadataEntry> entries = parseMetadata(metadata, metadataCount);
+        int parsedBytes = 0;
+        for (MetadataEntry entry : entries) {
+            parsedBytes += 8 + (int) entry.size;
+        }
         return new Info(revision, type, metadataOffset, metadataCount, metadataSize,
-            itemCount, totalSize, dataOffset, dataSize, contentId);
+            itemCount, totalSize, dataOffset, dataSize, contentId, entries,
+            metadata.length - parsedBytes);
+    }
+
+    private static List<MetadataEntry> parseMetadata(byte[] bytes, long declaredCount)
+            throws IOException {
+        List<MetadataEntry> entries = new ArrayList<>();
+        int p = 0;
+        for (long i = 0; i < declaredCount; i++) {
+            if (p > bytes.length - 8) {
+                throw new IOException("Metadata ends before all declared records are present.");
+            }
+            long id = u32(bytes, p);
+            long size = u32(bytes, p + 4);
+            p += 8;
+            if (size > bytes.length - p) {
+                throw new IOException("A metadata record exceeds the declared metadata region.");
+            }
+            int n = (int) size;
+            byte[] value = new byte[n];
+            System.arraycopy(bytes, p, value, 0, n);
+            entries.add(new MetadataEntry(id, size, value));
+            p += n;
+        }
+        return entries;
     }
 
     private static byte[] readAt(ContentResolver resolver, Uri uri, long offset,
@@ -153,6 +203,29 @@ final class PkgMetadataInspector {
         return out.toString().trim();
     }
 
+    private static String metadataName(long id) {
+        switch ((int) id) {
+            case 1: return "DRM type";
+            case 2: return "Content type";
+            case 3: return "Package type/flag";
+            case 4: return "Package size";
+            case 5: return "Package revision/version";
+            case 7: return "QA digest";
+            default: return "Unknown metadata";
+        }
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder out = new StringBuilder();
+        int limit = Math.min(bytes.length, 32);
+        for (int i = 0; i < limit; i++) {
+            if (i > 0) out.append(' ');
+            out.append(String.format(Locale.ROOT, "%02X", bytes[i] & 0xff));
+        }
+        if (bytes.length > limit) out.append(" …");
+        return out.toString();
+    }
+
     static String format(Info info) {
         String revision = info.revision == 0x8000 ? "finalized/retail (0x8000)"
             : info.revision == 0 ? "debug (0x0000)"
@@ -160,17 +233,35 @@ final class PkgMetadataInspector {
         String type = info.type == 1 ? "PS3 (type 1)"
             : info.type == 2 ? "PSP/Vita (type 2)"
             : String.format(Locale.ROOT, "unknown (type %d)", info.type);
-        return "PKG header parsed (read-only)\n"
-            + "Revision: " + revision + "\n"
-            + "Package type: " + type + "\n"
-            + "Content ID: " + (info.contentId.isEmpty() ? "(not present)" : info.contentId) + "\n"
-            + "Item count: " + info.itemCount + "\n"
-            + "Metadata: offset " + info.metadataOffset + ", " + info.metadataCount
-            + " records declared, " + info.metadataSize + " bytes\n"
-            + "Encrypted data region: offset " + info.dataOffset + ", " + info.dataSize + " bytes\n"
-            + "Total file size: " + info.totalSize + " bytes\n\n"
-            + "PKG recognition/metadata support is working; this does NOT install or launch the game. "
-            + "Package entry parsing, decryption, SELF loading, PS3 firmware services, SPU and RSX "
-            + "are not implemented.";
+        StringBuilder out = new StringBuilder();
+        out.append("PKG header parsed (read-only)\n")
+            .append("Revision: ").append(revision).append('\n')
+            .append("Package type: ").append(type).append('\n')
+            .append("Content ID: ").append(info.contentId.isEmpty() ? "(not present)" : info.contentId).append('\n')
+            .append("Item count: ").append(info.itemCount).append('\n')
+            .append("Metadata: offset ").append(info.metadataOffset).append(", ")
+            .append(info.metadataCount).append(" records declared, ")
+            .append(info.metadataSize).append(" bytes\n")
+            .append("Metadata records (read-only):\n");
+        for (int i = 0; i < info.metadataEntries.size(); i++) {
+            MetadataEntry entry = info.metadataEntries.get(i);
+            out.append("  ").append(i + 1).append(". ID 0x")
+                .append(String.format(Locale.ROOT, "%08X", entry.id))
+                .append(" (").append(metadataName(entry.id)).append("), ")
+                .append(entry.size).append(" bytes");
+            if (entry.value.length > 0) out.append(": ").append(hex(entry.value));
+            out.append('\n');
+        }
+        if (info.metadataTrailingBytes > 0) {
+            out.append("Metadata trailer/authentication bytes: ")
+                .append(info.metadataTrailingBytes).append(" (left uninterpreted)\n");
+        }
+        out.append("Encrypted data region: offset ").append(info.dataOffset).append(", ")
+            .append(info.dataSize).append(" bytes\n")
+            .append("Total file size: ").append(info.totalSize).append(" bytes\n\n")
+            .append("Metadata records were bounds-checked and read without decryption. ")
+            .append("This does NOT extract, install, or launch the game. The encrypted item table, ")
+            .append("protected SELF loading, PS3 firmware services, SPU and RSX remain unsupported.");
+        return out.toString();
     }
 }
