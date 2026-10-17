@@ -266,6 +266,40 @@ int main(void) {
         PPC_CPU_GUEST_EXIT);
     CHECK(steps == 5u && registers[5] == 12u);
 
+    /* ANDIS. shifts its immediate mask and updates CR0 for conditional branches. */
+    uint8_t andis_branch_code[24] = {0};
+    put32(andis_branch_code + 0, 0x38601234u); /* addi r3,0,0x1234 */
+    put32(andis_branch_code + 4, (29u << 26) | (3u << 21) | (4u << 16) | 1u); /* andis. r4,r3,1 => zero */
+    put32(andis_branch_code + 8, 0x41820008u); /* beq cr0,+8 */
+    put32(andis_branch_code + 12, 0x38A00063u); /* skipped */
+    put32(andis_branch_code + 16, 0x38A0000Cu); /* addi r5,0,12 */
+    put32(andis_branch_code + 20, 0x4e800020u);
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5250u, sizeof(andis_branch_code),
+        andis_branch_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5250u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[4] == 0u && registers[5] == 12u);
+
+    /* RLWIMI inserts only the selected rotated bits and preserves other RA bits. */
+    uint8_t rlwimi_code[12] = {0};
+    put32(rlwimi_code + 0, (20u << 26) | (3u << 21) | (4u << 16) |
+        (8u << 11) | (0u << 6) | (7u << 1)); /* rlwimi r4,r3,8,0,7 */
+    put32(rlwimi_code + 4, 0x4e800020u);
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5270u, 8u, rlwimi_code,
+        PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = 0x12345678u;
+    registers[4] = 0xabcdef01u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5270u, registers, 4u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 2u && (uint32_t)registers[4] ==
+        ((0xabcdef01u & 0x00ffffffu) | (0x34560000u & 0xff000000u)));
+
     /* PPC64 LD/STD/STDU must preserve big-endian 64-bit values and update RA. */
     uint8_t doubleword_code[20] = {0};
     uint8_t doubleword_data[16] = {0};
