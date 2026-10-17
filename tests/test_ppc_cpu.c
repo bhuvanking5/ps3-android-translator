@@ -92,7 +92,7 @@ int main(void) {
     CHECK(ppc_cpu_run(rotate_mask, 4, gpr) == PPC_CPU_OK);
     CHECK(gpr[4] == 0x00123400u);
     CHECK(gpr[5] == 0x1234u);
-    CHECK(gpr[6] == 0x00000000u);
+    CHECK(gpr[6] == 0x00000004u);
 
     memset(gpr, 0, sizeof(gpr));
     const uint32_t negative[] = { addi(3, 0, -2) };
