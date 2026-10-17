@@ -12,17 +12,19 @@ typedef enum {
     PS3_GUEST_ELF_UNSUPPORTED,
     PS3_GUEST_ELF_OUT_OF_BOUNDS,
     PS3_GUEST_ELF_MEMORY_MAP_ERROR,
-    PS3_GUEST_ELF_RELOCATION_REQUIRED
+    PS3_GUEST_ELF_RELOCATION_REQUIRED,
+    PS3_GUEST_ELF_ALLOCATION_FAILED
 } ps3_guest_elf_status;
 
 /*
  * Load an unencrypted, big-endian ELF64 PowerPC64 executable into caller-owned
  * guest RAM. This maps PT_LOAD segments only; it does not handle PS3 SELF
  * decryption, relocations, imports, firmware, or process/OS setup.
- * Addresses above 32 bits are rejected by this prototype memory model. ET_DYN
- * files and files containing PT_DYNAMIC are rejected until native relocation
- * and import resolution are implemented; use RELOCATION_REQUIRED to distinguish
- * that limitation from malformed input.
+ * Addresses above 32 bits are rejected by this prototype memory model. A narrow
+ * PT_DYNAMIC subset is supported only for ET_EXEC files with symbol-zero
+ * R_PPC64_ADDR32 / R_PPC64_REL32 RELA entries. ET_DYN, imports, other relocation
+ * types, and PS3 process/firmware ABI remain unsupported. Loading is staged so
+ * failed parsing or relocation does not partially modify RAM or memory maps.
  */
 ps3_guest_elf_status ps3_guest_elf_load(
     const uint8_t *file, size_t file_size,
