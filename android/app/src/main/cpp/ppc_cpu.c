@@ -20,7 +20,9 @@ ppc_cpu_status ppc_cpu_run_with_memory(
         const unsigned rb = (ins >> 11) & 31u;
 
         if (opcode == 18u) { /* b: relative, unlinked local branch only */
-            if ((ins & 3u) != 0u) return PPC_CPU_UNSUPPORTED_INSTRUCTION;
+            /* AA=1 is absolute addressing; LK=1 links. Neither is implemented. */
+            if ((ins & 3u) != 0u || (ins & 2u) != 0u)
+                return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             int32_t displacement = (int32_t)(ins & 0x03FFFFFCu);
             if ((displacement & 0x02000000) != 0)
                 displacement |= (int32_t)0xFC000000u;
@@ -32,18 +34,21 @@ ppc_cpu_status ppc_cpu_run_with_memory(
         } else if (opcode == 16u) { /* restricted CR-only conditional branch */
             const unsigned bo = (ins >> 21) & 31u;
             const unsigned bi = (ins >> 16) & 31u;
-            if ((ins & 3u) != 0u || (bo != 12u && bo != 4u))
-                return PPC_CPU_UNSUPPORTED_INSTRUCTION;
-            int32_t displacement = (int32_t)(ins & 0x0000FFFCu);
-            if ((displacement & 0x00008000) != 0)
-                displacement |= (int32_t)0xFFFF0000u;
-            const int64_t target = (int64_t)pc + displacement / 4;
-            if (target < 0 || target >= (int64_t)count)
+            /* AA=1 and LK=1 are not supported by this bounded runner. */
+            if ((ins & 3u) != 0u || (ins & 2u) != 0u ||
+                (bo != 12u && bo != 4u))
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             const unsigned cr_bit =
                 (condition[bi / 4u] >> (3u - (bi % 4u))) & 1u;
             const int take = (bo == 12u) ? (cr_bit != 0u) : (cr_bit == 0u);
+            /* An untaken branch falls through; its target is never used. */
             if (take) {
+                int32_t displacement = (int32_t)(ins & 0x0000FFFCu);
+                if ((displacement & 0x00008000) != 0)
+                    displacement |= (int32_t)0xFFFF0000u;
+                const int64_t target = (int64_t)pc + displacement / 4;
+                if (target < 0 || target >= (int64_t)count)
+                    return PPC_CPU_UNSUPPORTED_INSTRUCTION;
                 pc = (size_t)target;
                 continue;
             }
