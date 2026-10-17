@@ -88,6 +88,49 @@ int ps3_guest_memory_write32(void *context, uint32_t address, uint32_t value) {
     return 1;
 }
 
+int ps3_guest_memory_read8(void *context, uint32_t address, uint8_t *value) {
+    if (context == 0 || value == 0) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_READ, 1u);
+    if (region == 0) return 0;
+    *value = region->bytes[(size_t)(address - region->base)];
+    return 1;
+}
+
+int ps3_guest_memory_read16(void *context, uint32_t address, uint16_t *value) {
+    if (context == 0 || value == 0 || (address & 1u) != 0u) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_READ, 2u);
+    if (region == 0) return 0;
+    const uint8_t *p = region->bytes + (size_t)(address - region->base);
+    *value = (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
+    return 1;
+}
+
+int ps3_guest_memory_write8(void *context, uint32_t address, uint8_t value) {
+    if (context == 0) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_WRITE, 1u);
+    if (region == 0) return 0;
+    region->bytes[(size_t)(address - region->base)] = value;
+    return 1;
+}
+
+int ps3_guest_memory_write16(void *context, uint32_t address, uint16_t value) {
+    if (context == 0 || (address & 1u) != 0u) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_WRITE, 2u);
+    if (region == 0) return 0;
+    uint8_t *p = region->bytes + (size_t)(address - region->base);
+    p[0] = (uint8_t)(value >> 8);
+    p[1] = (uint8_t)value;
+    return 1;
+}
+
 int ps3_guest_memory_read64(void *context, uint32_t address, uint64_t *value) {
     if (context == 0 || value == 0 || (address & 7u) != 0u) return 0;
     ps3_guest_memory *memory = (ps3_guest_memory *)context;
