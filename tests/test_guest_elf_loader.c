@@ -304,6 +304,8 @@ int main(void) {
     put32(dynamic_file + 180, 0x38800005u);
     put32(dynamic_file + 184, 0x7ca32214u);
     put32(dynamic_file + 188, 0x4e800020u);
+    put64(dynamic_file + 192, 7u); /* malformed dynamic table: no DT_NULL */
+    put64(dynamic_file + 200, 0x10000u);
     memset(ram, 0xa5, sizeof(ram));
     ps3_guest_memory_init(&memory);
     ps3_guest_elf_status dynamic_status = ps3_guest_elf_load(dynamic_file,
