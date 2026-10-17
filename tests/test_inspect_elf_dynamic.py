@@ -17,7 +17,7 @@ def put64(data, off, value):
 
 
 def make_dynamic_elf():
-    data = bytearray(512)
+    data = bytearray(640)
     data[:7] = b"\x7fELF" + bytes((2, 2, 1))
     put16(data, 16, 3)  # ET_DYN
     put16(data, 18, 21)  # EM_PPC64
