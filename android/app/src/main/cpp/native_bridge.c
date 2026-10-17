@@ -4,6 +4,10 @@
 #include "ppc_cpu.h"
 #include "ppc_to_arm64.h"
 #include "controller_input.h"
+#include "guest_elf_loader.h"
+#include "guest_memory.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 /* Fixed, built-in ARM64 runtime smoke test; never use game-file bytes. */
 static const uint32_t kArm64SmokeTest[] = {
@@ -82,6 +86,80 @@ Java_org_ps3translator_prototype_MainActivity_nativeStatus(JNIEnv *env, jclass c
     } else {
         message = "Native translation/execution comparison FAILED. PS3 games are not supported yet.";
     }
+    return (*env)->NewStringUTF(env, message);
+}
+
+
+/*
+ * Experimental bounded interpreter path for a small, unencrypted ELF64/PPC64
+ * file. It never executes the file as host machine code. This is not a PS3
+ * process/runtime and cannot boot PKG/SELF games.
+ */
+JNIEXPORT jstring JNICALL
+Java_org_ps3translator_prototype_MainActivity_nativeRunSelectedElf(
+    JNIEnv *env, jclass clazz, jbyteArray input) {
+    (void)clazz;
+    if (input == 0) return (*env)->NewStringUTF(env, "No file bytes were supplied.");
+    const jsize input_size = (*env)->GetArrayLength(env, input);
+    if (input_size < 64 || (uint64_t)input_size > 32u * 1024u * 1024u)
+        return (*env)->NewStringUTF(env, "ELF runner rejected the file: size must be 64 bytes to 32 MiB for this prototype.");
+    uint8_t *file = (uint8_t *)malloc((size_t)input_size);
+    uint8_t *ram = (uint8_t *)calloc(1u, 64u * 1024u * 1024u);
+    if (file == 0 || ram == 0) {
+        free(file);
+        free(ram);
+        return (*env)->NewStringUTF(env, "Not enough memory for the bounded ELF test. No game was launched.");
+    }
+    (*env)->GetByteArrayRegion(env, input, 0, input_size, (jbyte *)file);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionClear(env);
+        free(file);
+        free(ram);
+        return (*env)->NewStringUTF(env, "Android could not read the selected file bytes.");
+    }
+
+    ps3_guest_memory memory;
+    ps3_guest_memory_init(&memory);
+    uint32_t entry = 0u;
+    const ps3_guest_elf_status load_status = ps3_guest_elf_load(
+        file, (size_t)input_size, &memory, ram, 0u,
+        64u * 1024u * 1024u, &entry);
+    if (load_status != PS3_GUEST_ELF_OK) {
+        free(file);
+        free(ram);
+        if (load_status == PS3_GUEST_ELF_BAD_FORMAT)
+            return (*env)->NewStringUTF(env, "ELF loader rejected this file's structure or entry point. PKG/SELF and real PS3 startup are not supported.");
+        if (load_status == PS3_GUEST_ELF_OUT_OF_BOUNDS)
+            return (*env)->NewStringUTF(env, "ELF uses addresses outside this prototype's 64 MiB guest RAM window. No game was launched.");
+        if (load_status == PS3_GUEST_ELF_MEMORY_MAP_ERROR)
+            return (*env)->NewStringUTF(env, "ELF memory map could not be created safely. No game was launched.");
+        return (*env)->NewStringUTF(env, "This file is not a supported unencrypted big-endian ELF64 PowerPC64 executable. PKG/SELF games cannot launch yet.");
+    }
+
+    uint64_t gpr[32] = {0};
+    size_t steps = 0u;
+    const ppc_cpu_status run_status = ppc_cpu_run_guest(
+        &memory, entry, gpr, 1024u, &steps);
+    char message[256];
+    if (run_status == PPC_CPU_UNSUPPORTED_INSTRUCTION) {
+        (void)snprintf(message, sizeof(message),
+            "ELF loaded at 0x%08x; interpreter ran %zu step(s), then hit an unsupported PowerPC instruction. r3=0x%llx. This is a launch-pipeline test, not a booted PS3 game.",
+            entry, steps, (unsigned long long)gpr[3]);
+    } else if (run_status == PPC_CPU_MEMORY_ACCESS_ERROR) {
+        (void)snprintf(message, sizeof(message),
+            "ELF loaded at 0x%08x; interpreter stopped after %zu step(s) on an unmapped/invalid guest memory access. PS3 process setup is not implemented.",
+            entry, steps);
+    } else if (run_status == PPC_CPU_STEP_LIMIT) {
+        (void)snprintf(message, sizeof(message),
+            "ELF loaded at 0x%08x; reached the 1024-step safety limit (r3=0x%llx). This does not mean the game booted.",
+            entry, (unsigned long long)gpr[3]);
+    } else {
+        (void)snprintf(message, sizeof(message),
+            "ELF runner stopped with status %d after %zu step(s). PS3 game compatibility is not established.",
+            (int)run_status, steps);
+    }
+    free(file);
+    free(ram);
     return (*env)->NewStringUTF(env, message);
 }
 
