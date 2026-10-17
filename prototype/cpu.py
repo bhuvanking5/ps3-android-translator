@@ -49,6 +49,14 @@ class CPUState:
             ) & MASK64
             self.pc = old_pc + 4
 
+        elif op == "addis":
+            ra = ins["ra"]
+            base = 0 if ra == 0 else self.gpr[ra]
+            self.gpr[ins["rt"]] = (
+                base + (ins["immediate"] << 16)
+            ) & MASK64
+            self.pc = old_pc + 4
+
         elif op in ("ori", "oris", "xori", "xoris"):
             immediate = ins["immediate"]
             if op in ("oris", "xoris"):
