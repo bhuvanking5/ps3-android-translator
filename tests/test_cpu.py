@@ -84,6 +84,17 @@ class CPUTests(unittest.TestCase):
 
         self.assertEqual(cpu.gpr[3], 6)
 
+    def test_oris_and_xoris_shift_immediate_into_high_half(self):
+        cpu = CPUState()
+        cpu.gpr[3] = 0x1234
+        oris = (25 << 26) | (3 << 21) | (4 << 16) | 0xABCD
+        xoris = (27 << 26) | (4 << 21) | (5 << 16) | 0x00FF
+        cpu.execute(oris)
+        cpu.execute(xoris)
+        self.assertEqual(cpu.gpr[4], 0xABCD1234)
+        self.assertEqual(cpu.gpr[5], 0xABCD1234 ^ 0x00FF0000)
+        self.assertEqual(cpu.pc, 8)
+
     def test_mulld_wraps_result_to_64_bits(self):
         cpu = CPUState()
         cpu.gpr[4] = 0xFFFFFFFFFFFFFFFF
