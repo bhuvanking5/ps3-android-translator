@@ -66,7 +66,8 @@ static int virtual_to_file(const load_segment *segments, size_t count,
 ps3_guest_dynamic_status ps3_guest_elf_parse_rela(
     const uint8_t *file, size_t file_size,
     ps3_guest_relocation *records, size_t record_capacity,
-    size_t *record_count) {
+    size_t *record_count, ps3_guest_symbol_resolver resolver,
+    void *resolver_context) {
     if (file == NULL || records == NULL || record_count == NULL ||
         file_size < ELF_HEADER_SIZE ||
         record_capacity > PS3_GUEST_ELF_DYNAMIC_MAX_RELOCS) {
@@ -242,12 +243,10 @@ ps3_guest_dynamic_status ps3_guest_elf_parse_rela(
             }
             const uint8_t *symbol = file + (size_t)symbol_offset;
             const uint16_t section_index = read_be16(symbol + 6u);
+            const uint32_t name_offset = read_be32(symbol);
             symbol_value = read_be64(symbol + 8u);
-            if (section_index == ELF_SHN_UNDEF || symbol_value > UINT32_MAX) {
-                return PS3_GUEST_DYNAMIC_UNSUPPORTED;
-            }
+            const char *symbol_name = NULL;
             if (have_strtab) {
-                const uint32_t name_offset = read_be32(symbol);
                 uint64_t string_offset = 0u;
                 if (name_offset >= string_table_size ||
                     !virtual_to_file(segments, segment_count, string_table_address,
@@ -256,6 +255,18 @@ ps3_guest_dynamic_status ps3_guest_elf_parse_rela(
                            (size_t)(string_table_size - name_offset)) == NULL) {
                     return PS3_GUEST_DYNAMIC_BAD_FORMAT;
                 }
+                symbol_name = (const char *)(file + (size_t)string_offset + name_offset);
+            }
+            if (section_index == ELF_SHN_UNDEF) {
+                if (resolver == NULL || symbol_name == NULL) {
+                    return PS3_GUEST_DYNAMIC_UNSUPPORTED;
+                }
+                if (!resolver(symbol_name, &symbol_value, resolver_context) ||
+                    symbol_value > UINT32_MAX) {
+                    return PS3_GUEST_DYNAMIC_UNSUPPORTED;
+                }
+            } else if (symbol_value > UINT32_MAX) {
+                return PS3_GUEST_DYNAMIC_UNSUPPORTED;
             }
         }
 
