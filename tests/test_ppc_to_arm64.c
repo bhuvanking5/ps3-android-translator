@@ -82,13 +82,15 @@ int main(void) {
     CHECK(ppc_translate_to_arm64(mulli_program, 3, 5, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
 
-    /* ORI/XORI immediate forms use RT as source and RA as destination. */
+    /* ORI/XORI and shifted ORIS/XORIS immediate forms. */
     const uint32_t logical_immediate[] = {
         (14u << 26) | (3u << 21) | 0x0F0Fu,
         (24u << 26) | (3u << 21) | (4u << 16) | 0x00F0u,
-        (26u << 26) | (4u << 21) | (5u << 16) | 0x0F00u
+        (26u << 26) | (4u << 21) | (5u << 16) | 0x0F00u,
+        (25u << 26) | (5u << 21) | (6u << 16) | 0xABCDu,
+        (27u << 26) | (6u << 21) | (7u << 16) | 0x00FFu
     };
-    CHECK(ppc_translate_to_arm64(logical_immediate, 3, 5, output,
+    CHECK(ppc_translate_to_arm64(logical_immediate, 5, 7, output,
           PPC_TO_ARM64_MAX_WORDS, &output_count) == PPC_TO_ARM64_OK);
     CHECK(output_count > 64u);
 
