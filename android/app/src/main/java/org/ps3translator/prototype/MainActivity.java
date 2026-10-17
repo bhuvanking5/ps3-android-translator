@@ -339,10 +339,74 @@ public final class MainActivity extends Activity {
             selectedGame.setText("SELF-style signature detected. Encrypted/signed executable handling "
                 + "is not implemented, so this file cannot be launched.");
         } else {
-            selectedGame.setText("No supported executable header detected in the first "
-                + Math.max(count, 0) + " bytes. ISO/PKG/container parsing is not implemented. "
-                + "Game was NOT launched.");
+            String discKind = detectDiscContainer(uri);
+            if (discKind != null) {
+                selectedGame.setText(discKind + " disc signature detected. This is only a signature "
+                    + "check; disc filesystem traversal, executable discovery, and the PS3 runtime "
+                    + "are not implemented. Game was NOT launched.");
+            } else {
+                selectedGame.setText("No supported executable/container signature detected in the "
+                    + "checked locations. ISO/UDF directory parsing and PKG extraction are not "
+                    + "implemented. Game was NOT launched.");
+            }
         }
+    }
+
+    /**
+     * Detects ISO 9660/UDF signatures at standard descriptor locations without
+     * mounting, extracting, decrypting, or executing the image.
+     */
+    private String detectDiscContainer(Uri uri) {
+        final int sectorSize = 2048;
+        final int firstDescriptorSector = 16;
+        final int descriptorCount = 32;
+        try (java.io.InputStream input = getContentResolver().openInputStream(uri)) {
+            if (input == null || !skipFully(input, (long) firstDescriptorSector * sectorSize)) {
+                return null;
+            }
+            byte[] descriptor = new byte[6];
+            for (int i = 0; i < descriptorCount; i++) {
+                int count = 0;
+                while (count < descriptor.length) {
+                    int n = input.read(descriptor, count, descriptor.length - count);
+                    if (n < 0) return null;
+                    if (n == 0) continue;
+                    count += n;
+                }
+                boolean isoType = (descriptor[0] >= 0 && descriptor[0] <= 3)
+                    || (descriptor[0] & 0xff) == 255;
+                if (isoType && descriptor[1] == 'C' && descriptor[2] == 'D'
+                        && descriptor[3] == '0' && descriptor[4] == '0'
+                        && descriptor[5] == '1') {
+                    return "ISO 9660";
+                }
+                String identifier = new String(descriptor, 1, 5,
+                    java.nio.charset.StandardCharsets.US_ASCII);
+                if ("BEA01".equals(identifier) || "NSR02".equals(identifier)
+                        || "NSR03".equals(identifier) || "TEA01".equals(identifier)) {
+                    return "UDF";
+                }
+                if (!skipFully(input, sectorSize - descriptor.length)) return null;
+            }
+        } catch (java.io.IOException | SecurityException ignored) {
+            // An unreadable or non-seekable provider is not treated as a valid image.
+        }
+        return null;
+    }
+
+    private boolean skipFully(java.io.InputStream input, long bytes)
+            throws java.io.IOException {
+        long remaining = bytes;
+        while (remaining > 0) {
+            long skipped = input.skip(remaining);
+            if (skipped > 0) {
+                remaining -= skipped;
+            } else {
+                if (input.read() < 0) return false;
+                remaining--;
+            }
+        }
+        return true;
     }
 
 
