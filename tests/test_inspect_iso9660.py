@@ -84,9 +84,16 @@ class Iso9660Tests(unittest.TestCase):
             parse_iso9660(io.BytesIO(image), len(image))
 
     def test_rejects_entry_limit(self):
-        image = make_iso()
+        image = bytearray(make_iso())
+        directory_start = 20 * SECTOR_SIZE
+        first = image[directory_start]
+        second = image[directory_start + first]
+        third_offset = directory_start + first + second
+        extra = record(22, 4, "SECOND.BIN;1")
+        image[third_offset:third_offset + len(extra)] = extra
+        image[22 * SECTOR_SIZE:22 * SECTOR_SIZE + 4] = b"DATA"
         with self.assertRaises(IsoFormatError):
-            parse_iso9660(io.BytesIO(image), len(image), max_entries=0)
+            parse_iso9660(io.BytesIO(image), len(image), max_entries=1)
 
 
 if __name__ == "__main__":
