@@ -96,7 +96,8 @@ def inspect_dynamic_elf(data: bytes) -> dict:
         "tags": [],
         "needed_libraries": [],
         "relocation_metadata": {},
-        "limitations": "Inspection only: no relocation, import resolution, or execution.",
+        "relocations": {"DT_RELA": [], "DT_JMPREL": []},
+        "limitations": "Inspection only: relocation entries are decoded but never applied; imports are not resolved and code is not executed.",
     }
     if dynamic is None:
         return result
@@ -153,6 +154,38 @@ def inspect_dynamic_elf(data: bytes) -> dict:
                       (23, "DT_JMPREL"), (2, "DT_PLTRELSZ"), (20, "DT_PLTREL")):
         if tag in values_by_tag:
             result["relocation_metadata"][name] = values_by_tag[tag][0]
+
+    def read_rela_table(pointer_tag: int, size_tag: int, output_key: str) -> list[dict]:
+        pointer_values = values_by_tag.get(pointer_tag, [])
+        size_values = values_by_tag.get(size_tag, [])
+        if not pointer_values and not size_values:
+            return []
+        if not pointer_values or not size_values:
+            raise ELFInspectionError(f"{TAG_NAMES[pointer_tag]} and {TAG_NAMES[size_tag]} must appear together")
+        if pointer_tag == 23 and values_by_tag.get(20, [None])[0] != 7:
+            raise ELFInspectionError("DT_JMPREL currently supports DT_PLTREL=DT_RELA only")
+        entry_size = values_by_tag.get(9, [None])[0]
+        if entry_size != 24:
+            raise ELFInspectionError("ELF64 RELA entry size must be 24 bytes (DT_RELAENT=24)")
+        table_size = size_values[0]
+        if table_size % 24:
+            raise ELFInspectionError("RELA table size is not a multiple of 24 bytes")
+        table_offset = virtual_to_file(pointer_values[0], table_size)
+        decoded = []
+        for rel_off in range(table_offset, table_offset + table_size, 24):
+            target = _u64(data, rel_off)
+            info = _u64(data, rel_off + 8)
+            addend = struct.unpack_from(">q", data, rel_off + 16)[0]
+            decoded.append({
+                "offset": target,
+                "symbol_index": info >> 32,
+                "type": info & 0xFFFFFFFF,
+                "addend": addend,
+            })
+        return decoded
+
+    result["relocations"]["DT_RELA"] = read_rela_table(7, 8, "DT_RELA")
+    result["relocations"]["DT_JMPREL"] = read_rela_table(23, 2, "DT_JMPREL")
     return result
 
 
