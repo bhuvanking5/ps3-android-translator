@@ -4,13 +4,7 @@
 #include "guest_elf_loader.h"
 #include "ppc_cpu.h"
 
-#define CHECK(condition) do { \
-    if (!(condition)) { \
-        fprintf(stderr, "CHECK failed at line %d: %s
-", __LINE__, #condition); \
-        return 1; \
-    } \
-} while (0)
+#define CHECK(c) do { if (!(c)) { fprintf(stderr, "CHECK failed at line %d: %s\\n", __LINE__, #c); return 1; } } while (0)
 
 static void put16(uint8_t *p, uint16_t v) {
     p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)v;
@@ -31,22 +25,22 @@ int main(void) {
     uint32_t entry = 0u;
     ps3_guest_memory_init(&memory);
 
-    memcpy(file, "\x7f""ELF", 4);
+    memcpy(file, "\\x7f""ELF", 4);
     file[4] = 2u; file[5] = 2u; file[6] = 1u;
     put16(file + 16, 2u); put16(file + 18, 21u); put32(file + 20, 1u);
     put64(file + 24, 0x1000u); put64(file + 32, 64u);
     put16(file + 52, 64u); put16(file + 54, 56u); put16(file + 56, 1u);
 
-    put32(file + 64, 1u);        /* PT_LOAD */
-    put32(file + 68, 5u);        /* PF_R | PF_X */
-    put64(file + 72, 120u);      /* file offset */
-    put64(file + 80, 0x1000u);   /* virtual address */
+    put32(file + 64, 1u);
+    put32(file + 68, 5u);
+    put64(file + 72, 120u);
+    put64(file + 80, 0x1000u);
     put64(file + 88, 0x1000u);
-    put64(file + 96, 8u);        /* file size */
-    put64(file + 104, 12u);      /* memory size, including BSS */
+    put64(file + 96, 8u);
+    put64(file + 104, 12u);
     put64(file + 112, 4u);
     file[120] = 0x38u; file[121] = 0x60u; file[122] = 0x00u; file[123] = 0x07u;
-    file[124] = 0x48u; file[125] = 0x00u; file[126] = 0x00u; file[127] = 0x00u; /* b to self */
+    file[124] = 0x48u; file[125] = 0x00u; file[126] = 0x00u; file[127] = 0x00u;
 
     CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
         sizeof(ram), &entry) == PS3_GUEST_ELF_OK);
@@ -68,11 +62,11 @@ int main(void) {
     CHECK(registers[3] == 7u);
 
     ps3_guest_memory_init(&memory);
-    file[71] = 4u; /* read-only segment: entry is not executable */
+    file[71] = 4u;
     CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
         sizeof(ram), &entry) == PS3_GUEST_ELF_BAD_FORMAT);
     CHECK(memory.count == 0u);
 
-    puts("Native ELF loader tests passed.");
+    puts("Native ELF loader and entry-point execution tests passed.");
     return 0;
 }
