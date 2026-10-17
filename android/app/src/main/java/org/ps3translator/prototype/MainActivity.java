@@ -447,7 +447,7 @@ public final class MainActivity extends Activity {
             } catch (java.io.IOException | SecurityException ex) {
                 runOnUiThread(() -> selectedGame.setText(
                     "PKG inspection stopped safely: " + ex.getMessage()
-                    + "\\nNo package was extracted, installed, or launched."));
+                    + "\nNo package was extracted, installed, or launched."));
             } catch (RuntimeException ex) {
                 runOnUiThread(() -> selectedGame.setText(
                     "PKG inspection failed safely (" + ex.getClass().getSimpleName()
