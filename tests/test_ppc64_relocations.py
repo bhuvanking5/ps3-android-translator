@@ -57,7 +57,7 @@ class PPC64RelocationTests(unittest.TestCase):
         memory = bytearray(16)
         symbols = {1: {"name": "local", "value": 0x1010, "section_index": 1}}
         count = apply_rela_records(
-            memory, 0x2000,
+            memory, 0x3000,
             [{"offset": 0x2000, "type": R_PPC64_ADDR64, "addend": 4, "symbol_index": 1}],
             symbols, elf_type="ET_DYN", load_bias=0x1000,
         )
