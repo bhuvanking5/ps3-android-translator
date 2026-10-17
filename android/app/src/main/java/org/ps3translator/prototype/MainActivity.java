@@ -78,17 +78,17 @@ public final class MainActivity extends Activity {
         String savedGame = prefs.getString("selected_game_uri", null);
         selectedGame = text(savedGame == null
             ? "No file selected. Choosing a file does not launch it."
-            : "Previously selected file URI:\\n" + savedGame
-                + "\\nSaved for reference only; this prototype cannot launch PS3 games.", 14, Color.LTGRAY);
+            : "Previously selected file URI:\n" + savedGame
+                + "\nSaved for reference only; PS3 game boot is not implemented.", 14, Color.LTGRAY);
         selectedGame.setPadding(0, 8, 0, 8);
         layout.addView(selectedGame);
 
         Button launch = new Button(this);
-        launch.setText("Inspect selected game file");
+        launch.setText("Try launching supported ELF (experimental)");
         launch.setOnClickListener(v -> inspectLaunchSelectedGame());
         layout.addView(launch);
         TextView launchNote = text(
-            "Launch pipeline milestone: validates the selected file header only. This build does not boot PS3 games.",
+            "Experimental: attempts a bounded interpreter run only for small, unencrypted ELF64 PowerPC64 files. PKG/SELF games, firmware, OS services and RSX graphics are not implemented.",
             13, Color.rgb(255, 205, 130));
         launchNote.setPadding(0, 4, 0, 8);
         layout.addView(launchNote);
@@ -186,7 +186,7 @@ public final class MainActivity extends Activity {
         simpleEffects.setOnCheckedChangeListener((button, checked) -> prefs.edit().putBoolean("simple_effects", checked).apply());
         layout.addView(simpleEffects);
 
-        TextView caveat = text("Prototype controls only: these options are saved, but they do not change game rendering yet. Game files are selected for UI testing only and are not read or executed. PS3 emulation is not implemented.", 13, Color.LTGRAY);
+        TextView caveat = text("This is not yet a PS3 emulator. The experimental launch path only loads a small unencrypted ELF into a bounded guest-memory model and interprets a tiny PowerPC subset. PKG/SELF decryption, installation, relocations, imports, stack/process setup, firmware, SPU and RSX are not implemented. No real PS3 game has booted.", 13, Color.LTGRAY);
         caveat.setPadding(0, 18, 0, 0);
         layout.addView(caveat);
         setContentView(scroll);
@@ -306,9 +306,7 @@ public final class MainActivity extends Activity {
                 && header[2] == 'L' && header[3] == 'F') {
             if (count >= 20 && header[4] == 2 && header[5] == 2
                     && header[18] == 0 && header[19] == 21) {
-                selectedGame.setText("Header check: big-endian ELF64 / PowerPC64 candidate detected. "
-                    + "This is only a format check; relocations, SELF decryption, the PS3 runtime, "
-                    + "and graphics translation are not implemented. Game was NOT launched.");
+                tryRunSelectedElf(uri);
             } else {
                 selectedGame.setText("ELF header detected, but it does not match the expected "
                     + "ELF64 big-endian PowerPC64 signature. Game was NOT launched.");
@@ -327,6 +325,45 @@ public final class MainActivity extends Activity {
                 + Math.max(count, 0) + " bytes. ISO/PKG/container parsing is not implemented. "
                 + "Game was NOT launched.");
         }
+    }
+
+
+    private void tryRunSelectedElf(Uri uri) {
+        selectedGame.setText("ELF candidate detected. Loading into the bounded guest runner…");
+        new Thread(() -> {
+            final int maxBytes = 32 * 1024 * 1024;
+            byte[] fileBytes;
+            try (java.io.InputStream input = getContentResolver().openInputStream(uri);
+                 java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream()) {
+                if (input == null) {
+                    runOnUiThread(() -> selectedGame.setText(
+                        "Cannot reopen the selected file. Choose it again and retry."));
+                    return;
+                }
+                byte[] chunk = new byte[8192];
+                int total = 0;
+                int n;
+                while ((n = input.read(chunk)) != -1) {
+                    if (n == 0) continue;
+                    total += n;
+                    if (total > maxBytes) {
+                        runOnUiThread(() -> selectedGame.setText(
+                            "This ELF is larger than the prototype's 32 MiB file limit. "
+                            + "No game was launched; larger files need a streaming loader."));
+                        return;
+                    }
+                    output.write(chunk, 0, n);
+                }
+                fileBytes = output.toByteArray();
+            } catch (java.io.IOException | SecurityException ex) {
+                runOnUiThread(() -> selectedGame.setText(
+                    "Could not read selected ELF: " + ex.getClass().getSimpleName()
+                    + ". Choose the file again and retry."));
+                return;
+            }
+            final String result = nativeRunSelectedElf(fileBytes);
+            runOnUiThread(() -> selectedGame.setText(result));
+        }, "ps3-elf-launch-test").start();
     }
 
     private String describeSelectedFile(Uri uri) {
@@ -363,6 +400,7 @@ public final class MainActivity extends Activity {
     }
 
     private static native String nativeStatus();
+    private static native String nativeRunSelectedElf(byte[] fileBytes);
 
     static {
         System.loadLibrary("translator_bridge");
