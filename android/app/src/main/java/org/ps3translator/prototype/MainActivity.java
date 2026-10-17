@@ -293,6 +293,26 @@ public final class MainActivity extends Activity {
     }
 
 
+    private String selectedDisplayName(Uri uri) {
+        String displayName = uri == null ? null : uri.getLastPathSegment();
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(uri,
+                new String[] {OpenableColumns.DISPLAY_NAME}, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (nameIndex >= 0 && !cursor.isNull(nameIndex)) {
+                    displayName = cursor.getString(nameIndex);
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // Some document providers do not expose display names.
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+        return displayName == null ? "" : displayName;
+    }
+
     private void inspectLaunchSelectedGame() {
         String saved = prefs.getString("selected_game_uri", null);
         if (saved == null) {
@@ -339,9 +359,17 @@ public final class MainActivity extends Activity {
             selectedGame.setText("SELF-style signature detected. Encrypted/signed executable handling "
                 + "is not implemented, so this file cannot be launched.");
         } else {
-            selectedGame.setText("No supported executable header detected in the first "
-                + Math.max(count, 0) + " bytes. ISO/PKG/container parsing is not implemented. "
-                + "Game was NOT launched.");
+            String displayName = selectedDisplayName(uri).toLowerCase(java.util.Locale.ROOT);
+            if (displayName.endsWith(".iso")) {
+                selectedGame.setText("ISO disc-image file detected by name, but its contents have "
+                    + "not been validated. PS3 ISO/UDF directory parsing, disc decryption where "
+                    + "applicable, executable discovery, and the PS3 runtime are not implemented. "
+                    + "Game was NOT launched.");
+            } else {
+                selectedGame.setText("No supported executable header detected in the first "
+                    + Math.max(count, 0) + " bytes. ISO/PKG/container parsing is not implemented. "
+                    + "Game was NOT launched.");
+            }
         }
     }
 
