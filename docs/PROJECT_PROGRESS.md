@@ -93,3 +93,10 @@ and its tests still require CI validation on the latest commit.
 ## Explicit top-level return contract (2026-10-17)
 
 The bounded guest runner now recognizes the exact PowerPC `blr` instruction (`0x4E800020`) as a clean top-level return to a synthetic host sentinel. The tiny ELF fixture uses this instead of an intentional self-branch, and the Android status reports a clean guest exit with GPR values. This is deliberately narrow: general link-register state, nested calls/returns, syscall handling, and a full PS3 process ABI are still unsupported. The contract improves the synthetic test harness; it does not demonstrate game compatibility.
+
+
+## Homebrew-style memory-and-branch smoke path (2026-10-17)
+
+Expanded the native ELF loader integration regression fixture to exercise a small sequence resembling a simple freestanding test program: initialize a register, write a word to mapped writable guest data, read it back, compare the result, take a conditional branch to skip a failure marker, then exit through the prototype top-level `blr` sentinel. The test asserts the loaded ELF entry, memory result, skipped instruction, exact step count, and clean exit status.
+
+This is still a synthetic test image, not an independently built PS3 homebrew game. It does not validate the PS3 ABI, relocations/imports, syscalls, or graphics. A real homebrew ELF remains a later milestone after process-entry setup and broader instruction support.

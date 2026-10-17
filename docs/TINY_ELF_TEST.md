@@ -15,3 +15,7 @@ python -m unittest discover -s tests -p 'test_tiny_ps3_elf.py' -v
 ~~~
 
 This file is a test fixture for the experimental native loader/runner. It is **not a PS3 game**. The Android built-in test can exercise this clean-return path, while selected-file support remains a limited raw-ELF interpreter path. PS3 SELF decryption, relocations/imports, OS services, SPU emulation, and RSX graphics are not implemented.
+
+## More complete native integration regression
+
+The native C regression test also loads a synthetic ELF program that performs a writable-data store and load, compares the loaded value, branches over a failure marker, and returns via the prototype top-level `blr` sentinel. This covers more of the loader/interpreter path than the four-instruction arithmetic fixture. It is still synthetic and is not a PS3 homebrew game.

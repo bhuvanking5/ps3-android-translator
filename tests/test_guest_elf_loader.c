@@ -46,7 +46,7 @@ int main(void) {
     put32(file + 136, 0x2c050007u); /* cmpwi cr0,r5,7 */
     put32(file + 140, 0x41820008u); /* beq cr0,+8: skip next instruction */
     put32(file + 144, 0x38c00063u); /* addi r6,0,99 (must be skipped) */
-    put32(file + 148, 0x48000000u); /* b . */
+    put32(file + 148, 0x4e800020u); /* blr: clean prototype top-level return */
 
 
     CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
@@ -55,8 +55,8 @@ int main(void) {
     CHECK(memory.count == 1u);
     CHECK(ram[0] == 0x38u && ram[1] == 0x60u &&
           ram[2] == 0x00u && ram[3] == 0x07u);
-    CHECK(ram[28] == 0x48u && ram[29] == 0u &&
-          ram[30] == 0u && ram[31] == 0u);
+    CHECK(ram[28] == 0x4eu && ram[29] == 0x80u &&
+          ram[30] == 0u && ram[31] == 0x20u);
     CHECK(ram[32] == 0u && ram[33] == 0u &&
           ram[34] == 0u && ram[35] == 0u);
     uint32_t word = 0u;
@@ -69,9 +69,10 @@ int main(void) {
     uint64_t registers[32] = {0};
     size_t steps = 0u;
     CHECK(ppc_cpu_run_guest(&memory, entry, registers, 8u, &steps) ==
-        PPC_CPU_STEP_LIMIT);
-    CHECK(steps == 8u);
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 7u);
     CHECK(registers[3] == 7u);
+    CHECK(registers[4] == 0x2000u);
     CHECK(registers[5] == 7u);
     CHECK(registers[6] == 0u); /* conditional branch skipped addi r6,0,99 */
     CHECK(data[0] == 0u && data[1] == 0u &&
