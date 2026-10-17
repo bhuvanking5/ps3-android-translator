@@ -105,6 +105,29 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
                                        (opcode == 27u ? 16u : 0u);
             registers[ra] = registers[rt] ^ immediate;
+        } else if (opcode == 58u || opcode == 62u) {
+            /* PPC64 LD/LDU and STD/STDU use a signed DS displacement. */
+            const unsigned xo = ins & 3u;
+            if (xo > 1u || (xo == 1u && (ra == 0u ||
+                (opcode == 58u && rt == ra)))) {
+                if (steps_executed != 0) *steps_executed = steps;
+                return PPC_CPU_UNSUPPORTED_INSTRUCTION;
+            }
+            const int32_t displacement = (int16_t)(ins & 0xfffcu);
+            const uint64_t base = ra == 0u ? 0u : registers[ra];
+            const uint32_t address = (uint32_t)(base + (uint64_t)(int64_t)displacement);
+            if (opcode == 58u) {
+                uint64_t value = 0u;
+                if (!ps3_guest_memory_read64(memory_context, address, &value)) {
+                    if (steps_executed != 0) *steps_executed = steps;
+                    return PPC_CPU_MEMORY_ACCESS_ERROR;
+                }
+                registers[rt] = value;
+            } else if (!ps3_guest_memory_write64(memory_context, address, registers[rt])) {
+                if (steps_executed != 0) *steps_executed = steps;
+                return PPC_CPU_MEMORY_ACCESS_ERROR;
+            }
+            if (xo == 1u) registers[ra] = address;
         } else if (opcode == 32u) {
             const uint32_t address = (uint32_t)((ra == 0u ? 0u : registers[ra]) +
                 (uint64_t)(int64_t)sign16(ins));
