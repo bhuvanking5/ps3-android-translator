@@ -20,6 +20,11 @@ static uint32_t branch(int displacement, unsigned absolute, unsigned link) {
 static uint32_t andi(unsigned rs, unsigned ra, unsigned imm) {
     return (28u << 26) | (rs << 21) | (ra << 16) | (imm & 0xffffu);
 }
+static uint32_t rlwinm(unsigned rs, unsigned ra, unsigned sh,
+                        unsigned mb, unsigned me) {
+    return (21u << 26) | (rs << 21) | (ra << 16) | (sh << 11) |
+           (mb << 6) | (me << 1);
+}
 static uint32_t logical_imm(unsigned opcode, unsigned rs, unsigned ra, unsigned imm) {
     return (opcode << 26) | (rs << 21) | (ra << 16) | (imm & 0xffffu);
 }
@@ -75,6 +80,19 @@ int main(void) {
     };
     CHECK(ppc_cpu_run(mulli_program, 3, gpr) == PPC_CPU_OK);
     CHECK(gpr[4] == 12u && gpr[5] == UINT64_MAX - 23u);
+
+    /* RLWINM: full-width rotation, contiguous mask, and wrapped mask. */
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t rotate_mask[] = {
+        addi(3, 0, 0x1234),
+        rlwinm(3, 4, 8, 0, 31),       /* rotate left 8 */
+        rlwinm(3, 5, 0, 16, 31),      /* keep low 16 bits */
+        rlwinm(3, 6, 0, 28, 3)        /* wrapped mask keeps top and bottom bits */
+    };
+    CHECK(ppc_cpu_run(rotate_mask, 4, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 0x00123400u);
+    CHECK(gpr[5] == 0x1234u);
+    CHECK(gpr[6] == 0x00000000u);
 
     memset(gpr, 0, sizeof(gpr));
     const uint32_t negative[] = { addi(3, 0, -2) };
