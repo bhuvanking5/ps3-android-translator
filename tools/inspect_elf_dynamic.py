@@ -155,7 +155,7 @@ def inspect_dynamic_elf(data: bytes) -> dict:
         if tag in values_by_tag:
             result["relocation_metadata"][name] = values_by_tag[tag][0]
 
-    def read_rela_table(pointer_tag: int, size_tag: int, output_key: str) -> list[dict]:
+    def read_rela_table(pointer_tag: int, size_tag: int) -> list[dict]:
         pointer_values = values_by_tag.get(pointer_tag, [])
         size_values = values_by_tag.get(size_tag, [])
         if not pointer_values and not size_values:
@@ -184,8 +184,8 @@ def inspect_dynamic_elf(data: bytes) -> dict:
             })
         return decoded
 
-    result["relocations"]["DT_RELA"] = read_rela_table(7, 8, "DT_RELA")
-    result["relocations"]["DT_JMPREL"] = read_rela_table(23, 2, "DT_JMPREL")
+    result["relocations"]["DT_RELA"] = read_rela_table(7, 8)
+    result["relocations"]["DT_JMPREL"] = read_rela_table(23, 2)
     return result
 
 
@@ -207,6 +207,13 @@ def main() -> int:
         print(f"Needed library: {library}")
     for tag in result["tags"]:
         print(f"{tag['tag']}: 0x{tag['value']:x}")
+    for table_name, relocations in result["relocations"].items():
+        for relocation in relocations:
+            print(
+                f"{table_name} entry: offset=0x{relocation['offset']:x} "
+                f"symbol={relocation['symbol_index']} type={relocation['type']} "
+                f"addend={relocation['addend']}"
+            )
     print(result["limitations"])
     return 0
 
