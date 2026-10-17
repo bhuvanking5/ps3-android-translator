@@ -6,6 +6,7 @@ from tools.ppc64_relocations import (
     R_PPC64_REL64,
     RelocationError,
     apply_rela,
+    apply_rela_records,
 )
 
 
@@ -50,8 +51,6 @@ class PPC64RelocationTests(unittest.TestCase):
         self.assertEqual(memory, b"abcdefgh")
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
     def test_applies_et_dyn_bias_to_target_and_defined_symbol(self):
@@ -102,3 +101,6 @@ if __name__ == "__main__":
     def test_rejects_load_bias_for_et_exec(self):
         with self.assertRaisesRegex(RelocationError, "zero load bias"):
             apply_rela_records(bytearray(8), 0, [], {}, elf_type="ET_EXEC", load_bias=1)
+
+if __name__ == "__main__":
+    unittest.main()
