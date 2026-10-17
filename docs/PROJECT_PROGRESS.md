@@ -11,9 +11,11 @@ This repository is an experimental PowerPC-to-ARM64 research prototype, **not a 
 - The bounded PowerPC interpreter rejects record-form arithmetic/logical instructions when condition-register updates are not implemented.
 - The guest-memory ELF entry-point runner now applies the same record-form rejection rule; a regression test covers this behavior.
 - CI previously passed host C/Python tests, ARM64 generated-code execution, and Android debug APK build for commit d0e86900cad0d6ebe104001ce3797de0c61f9920.
-- A tiny ELF generator and tests are being added for the unencrypted ELF64 big-endian PowerPC64 format with a small supported instruction sequence.
+- Added tools/make_tiny_ps3_elf.py and tests/test_tiny_ps3_elf.py to generate and validate an unencrypted ELF64 big-endian PowerPC64 fixture with a small supported instruction sequence. Added docs/TINY_ELF_TEST.md and linked this progress log from README.
 
 ## Tiny executable fixture
+
+Fixture generator and format tests are now committed. The guest-runner regression test also verifies that unsupported record-form instructions stop explicitly. CI status for these newest commits is pending at the time of this update.
 
 Generate the test input with Python 3:
 
