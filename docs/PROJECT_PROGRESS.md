@@ -42,7 +42,7 @@ Next engineering milestones:
 
 The Android UI now has a **Run built-in ELF execution test** button. It synthesizes a tiny, unencrypted ELF64 big-endian PowerPC64 executable in the native bridge and routes it through the same ELF loader and bounded guest interpreter used by the selected-ELF path. The test sets r3=7, r4=5, computes r5=12, then uses the exact `blr` instruction as a prototype top-level return sentinel. The status line reports a clean guest exit and resulting registers.
 
-This is a useful device-side smoke test for the JNI → ELF loader → guest memory → PowerPC interpreter path. It is **not a PS3 game**, and reaching the step limit is expected for this fixture's intentional self-branch. The selected-file path is limited to raw ELF files no larger than 32 MiB, and the current guest RAM window is 64 MiB. PKG extraction/installation, SELF decryption, dynamic linking, process/stack setup, system services, SPU, and RSX remain missing. No real PS3 game has booted.
+This is a useful device-side smoke test for the JNI → ELF loader → guest memory → PowerPC interpreter path. It is **not a PS3 game**. The built-in fixture should now report a clean top-level return; the selected-file path remains limited to raw ELF files no larger than 32 MiB, and the current guest RAM window is 64 MiB. PKG extraction/installation, SELF decryption, dynamic linking, process/stack setup, system services, SPU, and RSX remain missing. No real PS3 game has booted.
 
 ## Additional immediate logical coverage (2026-10-17)
 
