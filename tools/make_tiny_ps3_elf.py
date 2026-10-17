@@ -15,8 +15,8 @@ ELF_HEADER_SIZE = 64
 PROGRAM_HEADER_SIZE = 56
 CODE_OFFSET = ELF_HEADER_SIZE + PROGRAM_HEADER_SIZE
 
-# addi r3,0,7; addi r4,0,5; add r5,r3,r4; b .
-WORDS = (0x38600007, 0x38800005, 0x7CA32214, 0x48000000)
+# addi r3,0,7; addi r4,0,5; add r5,r3,r4; blr (prototype top-level return)
+WORDS = (0x38600007, 0x38800005, 0x7CA32214, 0x4E800020)
 
 
 def build_elf() -> bytes:
@@ -48,7 +48,7 @@ def main() -> None:
     payload = build_elf()
     output.write_bytes(payload)
     print(f"Wrote {output} ({len(payload)} bytes), entry=0x{ENTRY:08x}")
-    print("Expected guest result: r3=7, r4=5, r5=12; then branch in place.")
+    print("Expected guest result: r3=7, r4=5, r5=12; then clean prototype return.")
 
 
 if __name__ == "__main__":

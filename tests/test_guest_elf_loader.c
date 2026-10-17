@@ -171,7 +171,7 @@ int main(void) {
     put32(file + 120, 0x38600007u); /* addi r3,0,7 */
     put32(file + 124, 0x38800005u); /* addi r4,0,5 */
     put32(file + 128, 0x7ca32214u); /* add r5,r3,r4 */
-    put32(file + 132, 0x48000000u); /* b .: keep the bounded runner busy */
+    put32(file + 132, 0x4e800020u); /* blr: clean top-level return in this prototype */
 
     memset(ram, 0, sizeof(ram));
     ps3_guest_memory_init(&memory);
@@ -182,7 +182,7 @@ int main(void) {
     memset(registers, 0, sizeof(registers));
     steps = 0u;
     CHECK(ppc_cpu_run_guest(&memory, entry, registers, 4u, &steps) ==
-        PPC_CPU_STEP_LIMIT);
+        PPC_CPU_GUEST_EXIT);
     CHECK(steps == 4u);
     CHECK(registers[3] == 7u);
     CHECK(registers[4] == 5u);

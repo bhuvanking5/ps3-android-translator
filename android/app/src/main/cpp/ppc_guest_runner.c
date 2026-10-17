@@ -17,6 +17,15 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             return PPC_CPU_MEMORY_ACCESS_ERROR;
         }
         ++steps;
+        /*
+         * The prototype invokes this entry as a top-level function with a
+         * synthetic return sentinel. Exact BLR is therefore a clean guest exit.
+         * General LR handling and nested function calls remain unsupported.
+         */
+        if (ins == 0x4e800020u) {
+            if (steps_executed != 0) *steps_executed = steps;
+            return PPC_CPU_GUEST_EXIT;
+        }
         const unsigned opcode = ins >> 26;
         const unsigned rt = (ins >> 21) & 31u;
         const unsigned ra = (ins >> 16) & 31u;

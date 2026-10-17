@@ -149,6 +149,11 @@ Java_org_ps3translator_prototype_MainActivity_nativeRunSelectedElf(
         (void)snprintf(message, sizeof(message),
             "ELF loaded at 0x%08x; interpreter stopped after %zu step(s) on an unmapped/invalid guest memory access. PS3 process setup is not implemented.",
             entry, steps);
+    } else if (run_status == PPC_CPU_GUEST_EXIT) {
+        (void)snprintf(message, sizeof(message),
+            "ELF loaded at 0x%08x; guest returned cleanly after %zu step(s) (r3=0x%llx, r4=0x%llx, r5=0x%llx). This is a synthetic ELF test, not a booted PS3 game.",
+            entry, steps, (unsigned long long)gpr[3],
+            (unsigned long long)gpr[4], (unsigned long long)gpr[5]);
     } else if (run_status == PPC_CPU_STEP_LIMIT) {
         (void)snprintf(message, sizeof(message),
             "ELF loaded at 0x%08x; reached the 1024-step safety limit (r3=0x%llx, r4=0x%llx, r5=0x%llx). This is only bounded guest execution, not a booted PS3 game.",
@@ -191,7 +196,7 @@ Java_org_ps3translator_prototype_MainActivity_nativeRunBuiltinElfTest(
         0x38, 0x60, 0x00, 0x07, /* addi r3,0,7 */
         0x38, 0x80, 0x00, 0x05, /* addi r4,0,5 */
         0x7c, 0xa3, 0x22, 0x14, /* add r5,r3,r4 => 12 */
-        0x48, 0x00, 0x00, 0x00  /* b .; bounded stop */
+        0x4e, 0x80, 0x00, 0x20  /* blr; prototype top-level clean return */
     };
     jbyteArray bytes = (*env)->NewByteArray(env, (jsize)sizeof(fixture));
     if (bytes == 0) {

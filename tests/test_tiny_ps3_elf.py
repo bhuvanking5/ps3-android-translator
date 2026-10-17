@@ -20,6 +20,7 @@ class TinyElfFixtureTests(unittest.TestCase):
         self.assertEqual(ph, (1, 5, CODE_OFFSET, ENTRY, ENTRY, 16, 16, 4))
         words = struct.unpack_from(">IIII", elf, CODE_OFFSET)
         self.assertEqual(words, WORDS)
+        self.assertEqual(words[-1], 0x4E800020)  # prototype top-level return
         self.assertEqual(len(elf), CODE_OFFSET + 16)
 
 
