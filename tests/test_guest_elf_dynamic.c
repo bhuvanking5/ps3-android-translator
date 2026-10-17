@@ -38,7 +38,8 @@ int main(void) {
 
     ps3_guest_relocation out[4];
     size_t n = 99;
-    ps3_guest_dynamic_status initial_status = ps3_guest_elf_parse_rela(f, sizeof(f), out, 4, &n, 0, 0);\n    if (initial_status != PS3_GUEST_DYNAMIC_OK) { fprintf(stderr, "initial parser status=%d\\n", (int)initial_status); return 1; }
+    ps3_guest_dynamic_status initial_status = ps3_guest_elf_parse_rela(f, sizeof(f), out, 4, &n, 0, 0);
+    if (initial_status != PS3_GUEST_DYNAMIC_OK) { fprintf(stderr, "initial parser status=%d\n", (int)initial_status); return 1; }
     CHECK(n == 2);
     CHECK(out[0].type == PS3_PPC64_R_ADDR32 && out[0].target_address == 0x1080 &&
           out[0].symbol_value == 0x1010 && out[0].addend == 0x20);
