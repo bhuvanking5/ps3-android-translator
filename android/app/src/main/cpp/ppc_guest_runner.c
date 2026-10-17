@@ -111,6 +111,27 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             }
         } else if (opcode == 7u) {
             registers[rt] = registers[ra] * (uint64_t)(int64_t)sign16(ins);
+        } else if (opcode == 21u || opcode == 23u) {
+            /* RLWINM/RLWNM: rotate low 32-bit word then apply inclusive PPC mask. */
+            if ((ins & 1u) != 0u) {
+                if (steps_executed != 0) *steps_executed = steps;
+                return PPC_CPU_UNSUPPORTED_INSTRUCTION;
+            }
+            const unsigned shift = opcode == 21u
+                ? ((ins >> 11) & 31u) : (unsigned)(registers[rb] & 31u);
+            const unsigned mb = (ins >> 6) & 31u;
+            const unsigned me = (ins >> 1) & 31u;
+            const uint32_t source = (uint32_t)registers[rt];
+            const uint32_t rotated = shift == 0u ? source :
+                (uint32_t)((source << shift) | (source >> (32u - shift)));
+            uint32_t mask = 0u;
+            unsigned bit = mb;
+            for (;;) {
+                mask |= (uint32_t)1u << (31u - bit);
+                if (bit == me) break;
+                bit = (bit + 1u) & 31u;
+            }
+            registers[ra] = (uint64_t)(rotated & mask);
         } else if (opcode == 31u) {
             /* Rc=1 requires CR0 updates, which this guest runner does not implement. */
             if ((ins & 1u) != 0u) {
