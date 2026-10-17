@@ -213,7 +213,7 @@ def inspect_dynamic_elf(data: bytes) -> dict:
             size = _u64(data, symbol_offset + 16)
             if name_offset >= len(string_table):
                 raise ELFInspectionError("dynamic symbol name offset is outside DT_STRTAB")
-            name_end = string_table.find(b"\\0", name_offset)
+            name_end = string_table.find(b"\0", name_offset)
             if name_end < 0:
                 raise ELFInspectionError("unterminated dynamic symbol name")
             symbols[symbol_index] = {
