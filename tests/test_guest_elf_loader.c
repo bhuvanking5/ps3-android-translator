@@ -78,6 +78,24 @@ int main(void) {
     CHECK(data[0] == 0u && data[1] == 0u &&
           data[2] == 0u && data[3] == 7u);
 
+    /* A linked subroutine call must return through LR and preserve the caller LR. */
+    uint8_t call_code[24] = {0};
+    put32(call_code, 0x7c0802a6u);      /* mflr r0: save top-level return sentinel */
+    put32(call_code + 4, 0x4800000du);  /* bl +12: call subroutine at 0x8010 */
+    put32(call_code + 8, 0x7c0803a6u);  /* mtlr r0: restore caller LR */
+    put32(call_code + 12, 0x4e800020u); /* blr: exit top-level guest */
+    put32(call_code + 16, 0x3860002au); /* addi r3,0,42 */
+    put32(call_code + 20, 0x4e800020u); /* blr: return to caller */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x8000u, sizeof(call_code), call_code,
+        PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x8000u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 6u);
+    CHECK(registers[3] == 42u);
+
     /* A load from unmapped guest data must stop with a memory fault. */
     uint8_t fault_code[8] = {0};
     put32(fault_code, 0x38805000u);     /* addi r4,0,0x5000 */
