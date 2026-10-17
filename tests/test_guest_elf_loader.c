@@ -131,6 +131,25 @@ int main(void) {
         PPC_CPU_UNSUPPORTED_INSTRUCTION);
     CHECK(steps == 1u);
 
+
+    /* Shifted logical immediates must behave the same in the actual ELF runner. */
+    uint8_t shifted_logic_code[12] = {0};
+    put32(shifted_logic_code, 0x38601234u);       /* addi r3,0,0x1234 */
+    put32(shifted_logic_code + 4, 0x64A4ABCDu);   /* oris r4,r5,0xABCD (patched below) */
+    put32(shifted_logic_code + 8, 0x68C500FFu);  /* xoris r5,r6,0x00FF (patched below) */
+    /* Encode RT as source and RA as destination: oris r4,r3,ABCD; xoris r5,r4,00FF. */
+    put32(shifted_logic_code + 4, (25u << 26) | (3u << 21) | (4u << 16) | 0xABCDu);
+    put32(shifted_logic_code + 8, (27u << 26) | (4u << 21) | (5u << 16) | 0x00FFu);
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x7000u, sizeof(shifted_logic_code),
+        shifted_logic_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x7000u, registers, 3u, &steps) == PPC_CPU_STEP_LIMIT);
+    CHECK(steps == 3u);
+    CHECK(registers[4] == 0xABCD1234u);
+    CHECK(registers[5] == (0xABCD1234u ^ 0x00FF0000u));
+
     /* Fetching from unmapped/non-executable memory must fail safely. */
     ps3_guest_memory_init(&memory);
     steps = 99u;
