@@ -266,6 +266,29 @@ int main(void) {
         PPC_CPU_GUEST_EXIT);
     CHECK(steps == 5u && registers[5] == 12u);
 
+    /* PPC64 LD/STD/STDU must preserve big-endian 64-bit values and update RA. */
+    uint8_t doubleword_code[20] = {0};
+    uint8_t doubleword_data[16] = {0};
+    put32(doubleword_code + 0, (62u << 26) | (3u << 21) | (4u << 16)); /* std r3,0(r4) */
+    put32(doubleword_code + 4, (58u << 26) | (5u << 21) | (4u << 16)); /* ld r5,0(r4) */
+    put32(doubleword_code + 8, (62u << 26) | (3u << 21) | (4u << 16) | 9u); /* stdu r3,8(r4) */
+    put32(doubleword_code + 12, (58u << 26) | (6u << 21) | (4u << 16)); /* ld r6,0(r4) */
+    put32(doubleword_code + 16, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5300u, sizeof(doubleword_code),
+        doubleword_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    CHECK(ps3_guest_memory_map(&memory, 0x9000u, sizeof(doubleword_data),
+        doubleword_data, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_WRITE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = UINT64_C(0x12345678abcdef01);
+    registers[4] = 0x9000u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5300u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[5] == UINT64_C(0x12345678abcdef01));
+    CHECK(registers[6] == UINT64_C(0x12345678abcdef01) && registers[4] == 0x9008u);
+    CHECK(doubleword_data[0] == 0x12u && doubleword_data[7] == 0x01u);
+
     /* Fetching from unmapped/non-executable memory must fail safely. */
     ps3_guest_memory_init(&memory);
     steps = 99u;
