@@ -30,5 +30,7 @@ int ps3_guest_memory_map(ps3_guest_memory *memory, uint32_t base,
 int ps3_guest_memory_read32(void *context, uint32_t address, uint32_t *value);
 int ps3_guest_memory_fetch32(void *context, uint32_t address, uint32_t *value);
 int ps3_guest_memory_write32(void *context, uint32_t address, uint32_t value);
+int ps3_guest_memory_read64(void *context, uint32_t address, uint64_t *value);
+int ps3_guest_memory_write64(void *context, uint32_t address, uint64_t value);
 
 #endif
