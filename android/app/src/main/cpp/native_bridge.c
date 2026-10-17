@@ -151,8 +151,9 @@ Java_org_ps3translator_prototype_MainActivity_nativeRunSelectedElf(
             entry, steps);
     } else if (run_status == PPC_CPU_STEP_LIMIT) {
         (void)snprintf(message, sizeof(message),
-            "ELF loaded at 0x%08x; reached the 1024-step safety limit (r3=0x%llx). This does not mean the game booted.",
-            entry, (unsigned long long)gpr[3]);
+            "ELF loaded at 0x%08x; reached the 1024-step safety limit (r3=0x%llx, r4=0x%llx, r5=0x%llx). This is only bounded guest execution, not a booted PS3 game.",
+            entry, (unsigned long long)gpr[3],
+            (unsigned long long)gpr[4], (unsigned long long)gpr[5]);
     } else {
         (void)snprintf(message, sizeof(message),
             "ELF runner stopped with status %d after %zu step(s). PS3 game compatibility is not established.",
@@ -161,6 +162,52 @@ Java_org_ps3translator_prototype_MainActivity_nativeRunSelectedElf(
     free(file);
     free(ram);
     return (*env)->NewStringUTF(env, message);
+}
+
+
+/*
+ * Built-in integration fixture: synthesize a tiny ELF64/PPC64 executable and
+ * pass it through the same JNI ELF loader/runner used for selected raw ELF
+ * files. It is a pipeline test, not a PS3 game.
+ */
+JNIEXPORT jstring JNICALL
+Java_org_ps3translator_prototype_MainActivity_nativeRunBuiltinElfTest(
+    JNIEnv *env, jclass clazz) {
+    static const jbyte fixture[] = {
+        0x7f, 'E', 'L', 'F', 2, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 2, 0, 21, 0, 0, 0, 1,
+        0, 0, 0, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 64,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 64, 0, 56, 0, 1, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 1, 0, 0, 0, 5,
+        0, 0, 0, 0, 0, 0, 0, 120,
+        0, 0, 0, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 16,
+        0, 0, 0, 0, 0, 0, 0, 16,
+        0, 0, 0, 0, 0, 0, 0, 4,
+        0x38, 0x60, 0x00, 0x07, /* addi r3,0,7 */
+        0x38, 0x80, 0x00, 0x05, /* addi r4,0,5 */
+        0x7c, 0xa3, 0x22, 0x14, /* add r5,r3,r4 => 12 */
+        0x48, 0x00, 0x00, 0x00  /* b .; bounded stop */
+    };
+    jbyteArray bytes = (*env)->NewByteArray(env, (jsize)sizeof(fixture));
+    if (bytes == 0) {
+        if ((*env)->ExceptionCheck(env)) (*env)->ExceptionClear(env);
+        return (*env)->NewStringUTF(env, "Could not allocate the built-in ELF fixture.");
+    }
+    (*env)->SetByteArrayRegion(env, bytes, 0, (jsize)sizeof(fixture), fixture);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionClear(env);
+        (*env)->DeleteLocalRef(env, bytes);
+        return (*env)->NewStringUTF(env, "Could not prepare the built-in ELF fixture.");
+    }
+    jstring result = Java_org_ps3translator_prototype_MainActivity_nativeRunSelectedElf(
+        env, clazz, bytes);
+    (*env)->DeleteLocalRef(env, bytes);
+    return result;
 }
 
 /*
