@@ -89,6 +89,7 @@ class Iso9660Tests(unittest.TestCase):
         first = image[directory_start]
         second = image[directory_start + first]
         third_offset = directory_start + first + second
+        third_offset += image[third_offset]  # append after the existing file record
         extra = record(22, 4, "SECOND.BIN;1")
         image[third_offset:third_offset + len(extra)] = extra
         image[22 * SECTOR_SIZE:22 * SECTOR_SIZE + 4] = b"DATA"
