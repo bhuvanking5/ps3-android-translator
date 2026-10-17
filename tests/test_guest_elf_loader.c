@@ -96,6 +96,26 @@ int main(void) {
     CHECK(steps == 6u);
     CHECK(registers[3] == 42u);
 
+    /* CTR-based indirect call/return path used by common PowerPC dispatch stubs. */
+    uint8_t ctr_call_code[28] = {0};
+    put32(ctr_call_code, 0x7c0802a6u);      /* mflr r0 */
+    put32(ctr_call_code + 4, 0x7ca903a6u);  /* mtctr r5 */
+    put32(ctr_call_code + 8, 0x4e800421u);  /* bctrl: call address in CTR */
+    put32(ctr_call_code + 12, 0x7c0803a6u); /* mtlr r0 */
+    put32(ctr_call_code + 16, 0x4e800020u); /* blr: top-level exit */
+    put32(ctr_call_code + 20, 0x3860002au); /* addi r3,0,42 */
+    put32(ctr_call_code + 24, 0x4e800020u); /* blr: return to bctrl caller */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x9000u, sizeof(ctr_call_code),
+        ctr_call_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    registers[5] = 0x9014u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x9000u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 7u);
+    CHECK(registers[3] == 42u);
+
     /* A load from unmapped guest data must stop with a memory fault. */
     uint8_t fault_code[8] = {0};
     put32(fault_code, 0x38805000u);     /* addi r4,0,0x5000 */
