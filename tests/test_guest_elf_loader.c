@@ -249,6 +249,23 @@ int main(void) {
         PPC_CPU_GUEST_EXIT);
     CHECK(steps == 5u && registers[4] == 0u && registers[5] == 12u);
 
+    /* CMPLWI must compare unsigned words and feed the following conditional branch. */
+    uint8_t cmplwi_branch_code[24] = {0};
+    put32(cmplwi_branch_code + 0, 0x38600008u); /* addi r3,0,8 */
+    put32(cmplwi_branch_code + 4, (10u << 26) | (3u << 16) | 7u); /* cmplwi cr0,r3,7 => GT */
+    put32(cmplwi_branch_code + 8, 0x41810008u); /* bgt cr0,+8 */
+    put32(cmplwi_branch_code + 12, 0x38A00063u); /* addi r5,0,99 (must be skipped) */
+    put32(cmplwi_branch_code + 16, 0x38A0000Cu); /* addi r5,0,12 */
+    put32(cmplwi_branch_code + 20, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5200u, sizeof(cmplwi_branch_code),
+        cmplwi_branch_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5200u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[5] == 12u);
+
     /* Fetching from unmapped/non-executable memory must fail safely. */
     ps3_guest_memory_init(&memory);
     steps = 99u;
