@@ -33,9 +33,10 @@ def decode_word(word):
         return {"mnemonic": "addi", "rt": rt, "ra": ra, "immediate": immediate}
 
     # Logical immediates: RT is source, RA is destination.
-    if opcode in (24, 26):
+    if opcode in (24, 25, 26, 27):
+        mnemonics = {24: "ori", 25: "oris", 26: "xori", 27: "xoris"}
         return {
-            "mnemonic": "ori" if opcode == 24 else "xori",
+            "mnemonic": mnemonics[opcode],
             "rt": (word >> 21) & 0x1F,
             "ra": (word >> 16) & 0x1F,
             "immediate": word & 0xFFFF,
