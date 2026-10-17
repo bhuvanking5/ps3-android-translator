@@ -64,7 +64,6 @@ final class PkgMetadataInspector {
             this.value = value;
         }
     }
-    }
 
     private PkgMetadataInspector() {}
 
