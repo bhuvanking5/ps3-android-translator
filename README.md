@@ -7,7 +7,7 @@ Experimental research project exploring translation of a **small subset of Power
 ## What exists today
 
 - A small PowerPC instruction decoder and reference interpreter, including logical operations and bounded execution for a tiny instruction subset.
-- A defensive PS3-style ELF64/PowerPC64 metadata inspector and bounded PT_LOAD segment mapper; this is not a complete SELF/ELF game loader.
+- A defensive PS3-style ELF64/PowerPC64 metadata inspector plus a native bounded PT_LOAD loader that copies an unencrypted ELF into caller-owned guest RAM, zero-fills BSS, applies read/write/execute permissions, and validates that the entry point lies in an executable segment. This is not a complete SELF/ELF game loader.
 - Experimental Python instruction encoding and translation tools for a limited instruction subset.
 - A bounded C PowerPC-to-ARM64 translator for ADDI, ADD, SUBF, MULLD, OR, AND, and XOR. It stores all 32 PowerPC GPRs in a stack-backed frame and uses ARM64 scratch registers for loads, operations, and stores.
 - An optional CPython extension API, `ps3_native.translate_and_execute_ppc(words, result_gpr)`, that accepts PowerPC instruction words, validates and translates the supported subset, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
@@ -17,7 +17,7 @@ Experimental research project exploring translation of a **small subset of Power
 - CMake tests for translation encodings, native execution, and Python-binding input validation, plus Android APK build checks.
 - A Python basic-block planner that splits supported instruction sequences around relative unconditional branches, builds explicit successor edges, and rejects conditional, absolute, linked, or out-of-range control flow.
 
-The ELF-to-CPU test uses a synthetic ELF with simple instructions. It validates this narrow prototype path only; it does not demonstrate compatibility with a real PS3 executable.
+The ELF-to-CPU test uses a synthetic ELF with simple instructions. The native loader currently maps PT_LOAD segments but does not execute from the ELF entry point. These tests validate a narrow prototype path only; they do not demonstrate compatibility with a real PS3 executable.
 
 ## Important limitations
 
