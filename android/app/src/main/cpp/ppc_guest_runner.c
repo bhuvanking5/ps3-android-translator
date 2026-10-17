@@ -223,6 +223,53 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
                 registers[ra] = (uint64_t)result;
             }
             else if (xo == 316u) registers[ra] = registers[rt] ^ registers[rb];
+            else if (xo == 23u || xo == 55u || xo == 87u || xo == 119u ||
+                     xo == 151u || xo == 183u || xo == 215u || xo == 247u ||
+                     xo == 279u || xo == 311u || xo == 343u || xo == 375u ||
+                     xo == 407u || xo == 439u) {
+                /* Common X-form indexed loads/stores; update variants write EA to RA. */
+                const int update = xo == 55u || xo == 119u || xo == 183u ||
+                    xo == 247u || xo == 311u || xo == 375u || xo == 439u;
+                const uint64_t base = ra == 0u ? 0u : registers[ra];
+                const uint32_t address = (uint32_t)(base + registers[rb]);
+                const int load = xo == 23u || xo == 55u || xo == 87u ||
+                    xo == 119u || xo == 279u || xo == 311u ||
+                    xo == 343u || xo == 375u;
+                if (update && (ra == 0u || (load && rt == ra))) {
+                    if (steps_executed != 0) *steps_executed = steps;
+                    return PPC_CPU_UNSUPPORTED_INSTRUCTION;
+                }
+                int ok = 0;
+                if (xo == 87u || xo == 119u) {
+                    uint8_t value = 0u;
+                    ok = ps3_guest_memory_read8(memory_context, address, &value);
+                    if (ok) registers[rt] = value;
+                } else if (xo == 23u || xo == 55u) {
+                    uint32_t value = 0u;
+                    ok = ps3_guest_memory_read32(memory_context, address, &value);
+                    if (ok) registers[rt] = value;
+                } else if (xo == 279u || xo == 311u ||
+                           xo == 343u || xo == 375u) {
+                    uint16_t value = 0u;
+                    ok = ps3_guest_memory_read16(memory_context, address, &value);
+                    if (ok) registers[rt] = (xo == 343u || xo == 375u)
+                        ? (uint64_t)(int64_t)(int16_t)value : (uint64_t)value;
+                } else if (xo == 215u || xo == 247u) {
+                    ok = ps3_guest_memory_write8(memory_context, address,
+                        (uint8_t)registers[rt]);
+                } else if (xo == 151u || xo == 183u) {
+                    ok = ps3_guest_memory_write32(memory_context, address,
+                        (uint32_t)registers[rt]);
+                } else {
+                    ok = ps3_guest_memory_write16(memory_context, address,
+                        (uint16_t)registers[rt]);
+                }
+                if (!ok) {
+                    if (steps_executed != 0) *steps_executed = steps;
+                    return PPC_CPU_MEMORY_ACCESS_ERROR;
+                }
+                if (update) registers[ra] = address;
+            }
             else {
                 if (steps_executed != 0) *steps_executed = steps;
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
