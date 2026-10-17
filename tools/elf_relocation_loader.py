@@ -82,7 +82,7 @@ def load_and_relocate(
         if p_type != PT_LOAD:
             continue
         flags = struct.unpack_from(">I", data, off + 4)[0]
-        file_off, vaddr, filesz, memsz, align = struct.unpack_from(">QQQQQ", data, off + 8)
+        file_off, vaddr, _paddr, filesz, memsz, align = struct.unpack_from(">QQQQQQ", data, off + 8)
         if filesz > memsz:
             raise ELFLoadError("PT_LOAD file size exceeds memory size")
         if file_off > len(data) or filesz > len(data) - file_off:
