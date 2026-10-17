@@ -38,6 +38,12 @@ Next engineering milestones:
 3. Expand instruction semantics in small batches with reference-vs-translated differential tests; reject unsupported instructions explicitly.
 4. Only after those foundations, try a real, legally obtained homebrew ELF. Do not treat commercial game boot as an expected result yet.
 
+## Android ELF launch-pipeline test (2026-10-17)
+
+The Android UI now has a **Run built-in ELF execution test** button. It synthesizes a tiny, unencrypted ELF64 big-endian PowerPC64 executable in the native bridge and routes it through the same ELF loader and bounded guest interpreter used by the selected-ELF path. The test sets r3=7, r4=5, computes r5=12, and then stops at the runner's instruction budget. The status line includes the resulting registers.
+
+This is a useful device-side smoke test for the JNI → ELF loader → guest memory → PowerPC interpreter path. It is **not a PS3 game**, and reaching the step limit is expected for this fixture's intentional self-branch. The selected-file path is limited to raw ELF files no larger than 32 MiB, and the current guest RAM window is 64 MiB. PKG extraction/installation, SELF decryption, dynamic linking, process/stack setup, system services, SPU, and RSX remain missing. No real PS3 game has booted.
+
 ## Additional immediate logical coverage (2026-10-17)
 
 The bounded native PowerPC interpreter and experimental AArch64 translator now include ORIS and XORIS (opcodes 25 and 27) alongside ORI/XORI. These instructions shift the 16-bit immediate left by 16 before applying OR/XOR. Regression tests cover the C reference interpreter, Python reference decoder/execution, translation acceptance, and the native ARM64 differential test path.
