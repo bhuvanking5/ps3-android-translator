@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "guest_memory.h"
+#include "guest_elf_dynamic.h"
 
 typedef enum {
     PS3_GUEST_ELF_OK = 0,
@@ -18,18 +19,27 @@ typedef enum {
 
 /*
  * Load an unencrypted, big-endian ELF64 PowerPC64 executable into caller-owned
- * guest RAM. It handles a narrow symbol-zero RELA subset for ET_EXEC only.
- * It does not handle PS3 SELF decryption, imports, firmware, or process/OS setup.
- * Addresses above 32 bits are rejected by this prototype memory model. A narrow
- * PT_DYNAMIC subset is supported only for ET_EXEC files with symbol-zero
- * R_PPC64_ADDR32 / R_PPC64_REL32 RELA entries. ET_DYN, imports, other relocation
- * types, and PS3 process/firmware ABI remain unsupported. Loading is staged so
- * failed parsing or relocation does not partially modify RAM or memory maps.
+ * guest RAM. It handles a restricted ET_EXEC RELA subset. The resolver variant
+ * allows the caller to explicitly approve named undefined-symbol imports.
+ * Addresses above 32 bits are rejected by this prototype memory model. ET_DYN,
+ * unsupported relocation types, PS3 SELF decryption, firmware setup, and the
+ * PS3 process ABI remain unsupported. Loading is staged so failed parsing or
+ * relocation does not partially modify RAM or memory maps.
  */
 ps3_guest_elf_status ps3_guest_elf_load(
     const uint8_t *file, size_t file_size,
     ps3_guest_memory *memory,
     uint8_t *ram, uint32_t ram_base, uint32_t ram_size,
     uint32_t *entry_point);
+
+/* Same transactional loader, with explicit import resolution for undefined
+ * dynamic symbols. Resolver callbacks must whitelist allowed names and return
+ * a valid 32-bit guest address/value; unknown imports are rejected. */
+ps3_guest_elf_status ps3_guest_elf_load_with_resolver(
+    const uint8_t *file, size_t file_size,
+    ps3_guest_memory *memory,
+    uint8_t *ram, uint32_t ram_base, uint32_t ram_size,
+    uint32_t *entry_point,
+    ps3_guest_symbol_resolver resolver, void *resolver_context);
 
 #endif
