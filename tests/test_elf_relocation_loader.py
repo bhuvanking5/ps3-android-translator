@@ -87,7 +87,7 @@ class ELFRelocationLoaderTests(unittest.TestCase):
 
     def test_rejects_entry_not_in_executable_segment(self):
         with self.assertRaisesRegex(ELFLoadError, "executable"):
-            load_and_relocate(make_elf(flags=3), load_bias=0x3000)
+            load_and_relocate(make_elf(flags=2), load_bias=0x3000)
 
 
 if __name__ == "__main__":
