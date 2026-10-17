@@ -96,9 +96,11 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             const uint64_t immediate = (uint64_t)(ins & 0xffffu) <<
                                        (opcode == 25u ? 16u : 0u);
             registers[ra] = registers[rt] | immediate;
-        } else if (opcode == 28u) {
-            /* ANDI. always updates CR0; a 16-bit mask gives EQ or GT, never LT. */
-            const uint64_t value = registers[rt] & (uint64_t)(ins & 0xffffu);
+        } else if (opcode == 28u || opcode == 29u) {
+            /* ANDI./ANDIS. update CR0; both immediate masks are non-negative. */
+            const uint64_t mask = (uint64_t)(ins & 0xffffu) <<
+                (opcode == 29u ? 16u : 0u);
+            const uint64_t value = registers[rt] & mask;
             registers[ra] = value;
             condition[0] = value == 0u ? 2u : 4u;
         } else if (opcode == 26u || opcode == 27u) {
@@ -108,8 +110,7 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
         } else if (opcode == 58u || opcode == 62u) {
             /* PPC64 LD/LDU and STD/STDU use a signed DS displacement. */
             const unsigned xo = ins & 3u;
-            if (xo > 1u || (xo == 1u && (ra == 0u ||
-                (opcode == 58u && rt == ra)))) {
+            if (xo > 1u || (xo == 1u && (ra == 0u || rt == ra))) {
                 if (steps_executed != 0) *steps_executed = steps;
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             }
@@ -172,6 +173,27 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             }
         } else if (opcode == 7u) {
             registers[rt] = registers[ra] * (uint64_t)(int64_t)sign16(ins);
+        } else if (opcode == 20u) {
+            /* RLWIMI rotates RS and inserts masked bits into the existing RA word. */
+            if ((ins & 1u) != 0u) {
+                if (steps_executed != 0) *steps_executed = steps;
+                return PPC_CPU_UNSUPPORTED_INSTRUCTION;
+            }
+            const unsigned shift = (ins >> 11) & 31u;
+            const unsigned mb = (ins >> 6) & 31u;
+            const unsigned me = (ins >> 1) & 31u;
+            const uint32_t source = (uint32_t)registers[rt];
+            const uint32_t rotated = shift == 0u ? source :
+                (uint32_t)((source << shift) | (source >> (32u - shift)));
+            uint32_t mask = 0u;
+            unsigned bit = mb;
+            for (;;) {
+                mask |= (uint32_t)1u << (31u - bit);
+                if (bit == me) break;
+                bit = (bit + 1u) & 31u;
+            }
+            const uint32_t destination = (uint32_t)registers[ra];
+            registers[ra] = (uint64_t)((destination & ~mask) | (rotated & mask));
         } else if (opcode == 21u || opcode == 23u) {
             /* RLWINM/RLWNM: rotate low 32-bit word then apply inclusive PPC mask. */
             if ((ins & 1u) != 0u) {
