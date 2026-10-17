@@ -70,15 +70,22 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
             const unsigned cr_bit = (condition[bi / 4u] >> (3u - (bi % 4u))) & 1u;
             const int take = bo == 12u ? cr_bit != 0u : cr_bit == 0u;
             if (take) next_pc = (uint32_t)(pc + (uint32_t)displacement);
-        } else if (opcode == 11u) {
+        } else if (opcode == 10u || opcode == 11u) {
+            /* CMPLWI compares unsigned 32-bit words; CMPWI compares signed words. */
             const unsigned bf = (ins >> 23) & 7u;
-            const int32_t lhs = (int32_t)(uint32_t)registers[ra];
-            const int32_t rhs = sign16(ins);
             if (((ins >> 21) & 1u) != 0u) {
                 if (steps_executed != 0) *steps_executed = steps;
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             }
-            condition[bf] = lhs < rhs ? 8u : lhs > rhs ? 4u : 2u;
+            if (opcode == 10u) {
+                const uint32_t lhs = (uint32_t)registers[ra];
+                const uint32_t rhs = ins & 0xffffu;
+                condition[bf] = lhs < rhs ? 8u : lhs > rhs ? 4u : 2u;
+            } else {
+                const int32_t lhs = (int32_t)(uint32_t)registers[ra];
+                const int32_t rhs = sign16(ins);
+                condition[bf] = lhs < rhs ? 8u : lhs > rhs ? 4u : 2u;
+            }
         } else if (opcode == 14u) {
             const uint64_t base = ra == 0u ? 0u : registers[ra];
             registers[rt] = base + (uint64_t)(int64_t)sign16(ins);
