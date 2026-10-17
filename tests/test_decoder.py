@@ -54,6 +54,15 @@ class DecoderTests(unittest.TestCase):
         self.assertEqual(result["ra"], 6)
         self.assertEqual(result["immediate"], 0xF00)
 
+    def test_decode_oris_and_xoris(self):
+        oris = (25 << 26) | (3 << 21) | (4 << 16) | 0xABCD
+        xoris = (27 << 26) | (4 << 21) | (5 << 16) | 0x00FF
+
+        self.assertEqual(decode_word(oris)["mnemonic"], "oris")
+        self.assertEqual(decode_word(oris)["immediate"], 0xABCD)
+        self.assertEqual(decode_word(xoris)["mnemonic"], "xoris")
+        self.assertEqual(decode_word(xoris)["immediate"], 0x00FF)
+
     def test_decode_cmpwi(self):
         word = (11 << 26) | (2 << 23) | (5 << 16) | 0xFFFC
         result = decode_word(word)
