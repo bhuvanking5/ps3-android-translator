@@ -2,6 +2,7 @@
 
 #include <limits.h>
 #include <string.h>
+#include <stdio.h>
 
 #define ELF_HEADER_SIZE 64u
 #define ELF_PROGRAM_HEADER_SIZE 56u
@@ -242,6 +243,7 @@ ps3_guest_dynamic_status ps3_guest_elf_parse_rela(
                 return PS3_GUEST_DYNAMIC_UNSUPPORTED;
             }
             const uint8_t *symbol = file + (size_t)symbol_offset;
+            fprintf(stderr, "DBG symtab=%llx idx=%u off=%llu shndx=%u value=%llx name=%u\\n", (unsigned long long)symbol_table_address, symbol_index, (unsigned long long)symbol_offset, read_be16(symbol + 6u), (unsigned long long)read_be64(symbol + 8u), read_be32(symbol));
             const uint16_t section_index = read_be16(symbol + 6u);
             const uint32_t name_offset = read_be32(symbol);
             symbol_value = read_be64(symbol + 8u);
