@@ -115,7 +115,7 @@ int main(void) {
         cond_branch(12, 2, 8), addi(5, 0, 12), addi(5, 0, 99)
     };
     CHECK(ppc_cpu_run(andi_nonzero_branch, 5, gpr) == PPC_CPU_OK);
-    CHECK(gpr[4] == 3u && gpr[5] == 12u);
+    CHECK(gpr[4] == 3u && gpr[5] == 99u); /* EQ=false: BC falls through */
 
     const uint32_t unsupported_conditional[] = {
         cond_branch(16, 2, 4), addi(3, 0, 1)
