@@ -293,13 +293,13 @@ int main(void) {
     put64(dynamic_file + 24, 0x10000u); put64(dynamic_file + 32, 64u);
     put16(dynamic_file + 52, 64u); put16(dynamic_file + 54, 56u);
     put16(dynamic_file + 56, 2u);
-    put32(dynamic_file + 64, 1u); put32(dynamic_file + 68, 5u);
-    put64(dynamic_file + 72, 176u); put64(dynamic_file + 80, 0x10000u);
-    put64(dynamic_file + 88, 0x10000u); put64(dynamic_file + 96, 16u);
-    put64(dynamic_file + 104, 16u); put64(dynamic_file + 112, 4u);
-    put32(dynamic_file + 120, 2u); /* PT_DYNAMIC */
-    put64(dynamic_file + 128, 192u); put64(dynamic_file + 136, 0x10010u);
-    put64(dynamic_file + 152, 16u); put64(dynamic_file + 160, 16u);
+    put32(dynamic_file + 64, 2u); /* PT_DYNAMIC appears first deliberately. */
+    put64(dynamic_file + 72, 192u); put64(dynamic_file + 80, 0x10010u);
+    put64(dynamic_file + 96, 16u); put64(dynamic_file + 104, 16u);
+    put32(dynamic_file + 120, 1u); put32(dynamic_file + 124, 5u);
+    put64(dynamic_file + 128, 176u); put64(dynamic_file + 136, 0x10000u);
+    put64(dynamic_file + 144, 0x10000u); put64(dynamic_file + 152, 16u);
+    put64(dynamic_file + 160, 16u); put64(dynamic_file + 168, 4u);
     put32(dynamic_file + 176, 0x38600007u);
     put32(dynamic_file + 180, 0x38800005u);
     put32(dynamic_file + 184, 0x7ca32214u);
