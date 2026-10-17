@@ -195,6 +195,14 @@ int main(void) {
         sizeof(ram), &entry) == PS3_GUEST_ELF_BAD_FORMAT);
     CHECK(memory.count == 0u);
 
+    /* PowerPC ELF entry points must be instruction-aligned. */
+    file[31] = 0x02u; /* entry = 0x10002, inside the segment but misaligned */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x10000u,
+        sizeof(ram), &entry) == PS3_GUEST_ELF_BAD_FORMAT);
+    CHECK(memory.count == 0u);
+    file[31] = 0u; /* restore aligned entry 0x10000 */
+
     /* Reject a truncated program-header table without mapping guest memory. */
     file[31] = 0u; /* restore entry to 0x10000 */
     put64(file + 32, 140u); /* one 56-byte header cannot fit from offset 140 */
