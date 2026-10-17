@@ -142,6 +142,17 @@ int main(void) {
         return 1;
     }
 
+    const uint32_t shifted_logical_program[] = {
+        (14u << 26) | (3u << 21) | 0x1234u,
+        (25u << 26) | (3u << 21) | (4u << 16) | 0xABCDu,
+        (27u << 26) | (4u << 21) | (5u << 16) | 0x00FFu
+    };
+    if (check_program("ORIS/XORIS shifted immediates", shifted_logical_program,
+            sizeof(shifted_logical_program) / sizeof(shifted_logical_program[0]),
+            5u, (0xABCD1234u ^ 0x00FF0000u)) != 0) {
+        return 1;
+    }
+
     const uint32_t spilled_register_program[] = {
         (14u << 26) | (31u << 21) | 12000u, /* addi r31,r0,12000 */
         (14u << 26) | (30u << 21) | (31u << 16) | ((uint32_t)-5000 & 0xffffu),
