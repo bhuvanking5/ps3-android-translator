@@ -118,7 +118,7 @@ public final class MainActivity extends Activity {
         launch.setOnClickListener(v -> inspectLaunchSelectedGame());
         layout.addView(launch);
         TextView launchNote = text(
-            "Experimental: attempts a bounded interpreter run only for small, unencrypted ELF64 PowerPC64 files. PKG/SELF games, firmware, OS services and RSX graphics are not implemented.",
+            "Experimental: inspects PKG headers and attempts a bounded interpreter run only for small, unencrypted ELF64 PowerPC64 files. PKG installation/decryption, SELF games, firmware, OS services and RSX graphics are not implemented.",
             13, Color.rgb(255, 205, 130));
         launchNote.setPadding(0, 4, 0, 8);
         launchNote.setLineSpacing(dp(3), 1.0f);
@@ -245,7 +245,7 @@ public final class MainActivity extends Activity {
         simpleEffects.setOnCheckedChangeListener((button, checked) -> prefs.edit().putBoolean("simple_effects", checked).apply());
         layout.addView(simpleEffects);
 
-        TextView caveat = text("This is not yet a PS3 emulator. The experimental launch path only loads a small unencrypted ELF into a bounded guest-memory model and interprets a tiny PowerPC subset. PKG/SELF decryption, installation, relocations, imports, stack/process setup, firmware, SPU and RSX are not implemented. No real PS3 game has booted.", 13, Color.LTGRAY);
+        TextView caveat = text("This is not yet a PS3 emulator. PKG support currently validates bounded header metadata only; it does not extract, decrypt, install or launch PKG contents. The experimental ELF path loads only a small unencrypted ELF into a bounded guest-memory model and interprets a tiny PowerPC subset. SELF handling, full relocations/imports, stack/process setup, firmware, SPU and RSX are not implemented. No real PS3 game has booted.", 13, Color.LTGRAY);
         caveat.setPadding(0, 18, 0, 0);
         caveat.setLineSpacing(dp(3), 1.0f);
         caveat.setBackground(roundedBackground(new int[] {Color.rgb(23, 31, 48), Color.rgb(23, 31, 48)}, dp(14)));
