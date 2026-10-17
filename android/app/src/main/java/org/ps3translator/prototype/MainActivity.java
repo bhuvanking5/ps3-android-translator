@@ -415,9 +415,7 @@ public final class MainActivity extends Activity {
             }
         } else if (count >= 4 && header[0] == 0x7f && header[1] == 'P'
                 && header[2] == 'K' && header[3] == 'G') {
-            selectedGame.setText("PS3 PKG package header detected. The selected file is recognized, "
-                + "but PKG metadata parsing, package extraction/installation, SELF handling, and "
-                + "the PS3 runtime are not implemented. Game was NOT launched.");
+            inspectPkg(uri);
         } else if (count >= 4 && header[0] == 'S' && header[1] == 'C'
                 && header[2] == 'E' && header[3] == 0) {
             selectedGame.setText("SELF-style signature detected. Encrypted/signed executable handling "
@@ -436,6 +434,26 @@ public final class MainActivity extends Activity {
                     + "Game was NOT launched.");
             }
         }
+    }
+
+    private void inspectPkg(Uri uri) {
+        selectedGame.setText("PS3 PKG signature detected. Validating bounded package header…");
+        new Thread(() -> {
+            try {
+                PkgMetadataInspector.Info info =
+                    PkgMetadataInspector.inspect(getContentResolver(), uri);
+                final String report = PkgMetadataInspector.format(info);
+                runOnUiThread(() -> selectedGame.setText(report));
+            } catch (java.io.IOException | SecurityException ex) {
+                runOnUiThread(() -> selectedGame.setText(
+                    "PKG inspection stopped safely: " + ex.getMessage()
+                    + "\\nNo package was extracted, installed, or launched."));
+            } catch (RuntimeException ex) {
+                runOnUiThread(() -> selectedGame.setText(
+                    "PKG inspection failed safely (" + ex.getClass().getSimpleName()
+                    + "). No package was extracted, installed, or launched."));
+            }
+        }, "ps3-pkg-header-inspection").start();
     }
 
     private void inspectIsoImage(Uri uri) {
