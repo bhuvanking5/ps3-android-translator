@@ -21,7 +21,7 @@ ppc_cpu_status ppc_cpu_run_with_memory(
 
         if (opcode == 18u) { /* b: relative, unlinked local branch only */
             /* AA=1 is absolute addressing; LK=1 links. Neither is implemented. */
-            if ((ins & 3u) != 0u || (ins & 2u) != 0u)
+            if ((ins & 3u) != 0u)
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             int32_t displacement = (int32_t)(ins & 0x03FFFFFCu);
             if ((displacement & 0x02000000) != 0)
@@ -35,7 +35,7 @@ ppc_cpu_status ppc_cpu_run_with_memory(
             const unsigned bo = (ins >> 21) & 31u;
             const unsigned bi = (ins >> 16) & 31u;
             /* AA=1 and LK=1 are not supported by this bounded runner. */
-            if ((ins & 3u) != 0u || (ins & 2u) != 0u ||
+            if ((ins & 3u) != 0u ||
                 (bo != 12u && bo != 4u))
                 return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             const unsigned cr_bit =
@@ -91,6 +91,8 @@ ppc_cpu_status ppc_cpu_run_with_memory(
         } else if (opcode == 26u) { /* XORI: zero-extended immediate */
             registers[ra] = registers[rt] ^ (uint64_t)(ins & 0xffffu);
         } else if (opcode == 31u) {
+            /* Rc=1 requires CR0 updates, which this subset does not implement. */
+            if ((ins & 1u) != 0u) return PPC_CPU_UNSUPPORTED_INSTRUCTION;
             const unsigned xo = (ins >> 1) & 0x3ffu;
             if (xo == 266u) registers[rt] = registers[ra] + registers[rb];
             else if (xo == 40u) registers[rt] = registers[rb] - registers[ra];
