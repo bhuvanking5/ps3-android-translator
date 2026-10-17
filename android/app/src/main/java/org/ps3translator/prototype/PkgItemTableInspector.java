@@ -134,7 +134,7 @@ final class PkgItemTableInspector {
             out.append((char) c);
         }
         String value = out.toString();
-        if (value.startsWith("/") || value.indexOf('\\\\') >= 0) return null;
+        if (value.startsWith("/") || value.indexOf('\\') >= 0) return null;
         for (String part : value.split("/")) {
             if (part.equals("..") || part.equals(".")) return null;
         }
