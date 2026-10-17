@@ -33,3 +33,9 @@ This creates tiny_ps3_test.elf, an ELF64 big-endian PowerPC64 ET_EXEC with one R
 2. Connect a test ELF fixture to a native integration test that checks the final guest register state.
 3. Add minimal guest process/runtime setup and explicit syscall/exit handling for a clean stop condition.
 4. Only then try a real, legally obtained homebrew ELF; do not treat commercial game boot as an expected result yet.
+
+## Additional immediate logical coverage (2026-10-17)
+
+The bounded native PowerPC interpreter and experimental AArch64 translator now include ORIS and XORIS (opcodes 25 and 27) alongside ORI/XORI. These instructions shift the 16-bit immediate left by 16 before applying OR/XOR. Regression tests cover the C reference interpreter, Python reference decoder/execution, translation acceptance, and the native ARM64 differential test path.
+
+This remains a narrow instruction-subset improvement. It does not add full PPU semantics, dynamic block caching, PS3 system services, SPU/RSX support, or real-game compatibility.
