@@ -537,6 +537,44 @@ int main(void) {
           dynamic_ram[0] == 0xa5u && dynamic_ram[0xa0] == 0xa5u &&
           dynamic_ram[511] == 0xa5u);
 
+    /* Indexed X-form byte/halfword/word memory operations used by PPC code. */
+    uint8_t indexed_code[36] = {0};
+    uint8_t indexed_data[16] = {0};
+    put32(indexed_code + 0, (31u << 26) | (3u << 21) | (4u << 16) |
+        (5u << 11) | (151u << 1)); /* stwx r3,r4,r5 */
+    put32(indexed_code + 4, (31u << 26) | (6u << 21) | (4u << 16) |
+        (5u << 11) | (23u << 1)); /* lwzx r6,r4,r5 */
+    put32(indexed_code + 8, (31u << 26) | (3u << 21) | (4u << 16) |
+        (5u << 11) | (215u << 1)); /* stbx r3,r4,r5 */
+    put32(indexed_code + 12, (31u << 26) | (7u << 21) | (4u << 16) |
+        (5u << 11) | (87u << 1)); /* lbzx r7,r4,r5 */
+    put32(indexed_code + 16, 0x38A00006u); /* addi r5,0,6 */
+    put32(indexed_code + 20, (31u << 26) | (3u << 21) | (4u << 16) |
+        (5u << 11) | (407u << 1)); /* sthx r3,r4,r5 */
+    put32(indexed_code + 24, (31u << 26) | (8u << 21) | (4u << 16) |
+        (5u << 11) | (279u << 1)); /* lhzx r8,r4,r5 */
+    put32(indexed_code + 28, (31u << 26) | (9u << 21) | (4u << 16) |
+        (5u << 11) | (343u << 1)); /* lhax r9,r4,r5 */
+    put32(indexed_code + 32, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5600u, sizeof(indexed_code),
+        indexed_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    CHECK(ps3_guest_memory_map(&memory, 0xb000u, sizeof(indexed_data), indexed_data,
+        PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_WRITE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = 0x12345678u;
+    registers[4] = 0xb000u;
+    registers[5] = 0u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5600u, registers, 12u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 9u && registers[6] == 0x12345678u);
+    CHECK(registers[7] == 0x78u && registers[8] == 0x5678u &&
+        registers[9] == 0x5678u);
+    CHECK(indexed_data[0] == 0x78u && indexed_data[1] == 0x56u &&
+        indexed_data[2] == 0x34u && indexed_data[3] == 0x12u &&
+        indexed_data[6] == 0x56u && indexed_data[7] == 0x78u);
+
     puts("Native ELF loader and entry-point execution tests passed.");
     return 0;
 }
