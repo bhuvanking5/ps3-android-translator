@@ -306,9 +306,12 @@ int main(void) {
     put32(dynamic_file + 188, 0x4e800020u);
     memset(ram, 0xa5, sizeof(ram));
     ps3_guest_memory_init(&memory);
-    CHECK(ps3_guest_elf_load(dynamic_file, sizeof(dynamic_file), &memory,
-        ram, 0x10000u, sizeof(ram), &entry) ==
-        PS3_GUEST_ELF_RELOCATION_REQUIRED);
+    ps3_guest_elf_status dynamic_status = ps3_guest_elf_load(dynamic_file,
+        sizeof(dynamic_file), &memory, ram, 0x10000u, sizeof(ram), &entry);
+    if (dynamic_status != PS3_GUEST_ELF_RELOCATION_REQUIRED) {
+        fprintf(stderr, "dynamic ELF guard returned status %d\\n", (int)dynamic_status);
+    }
+    CHECK(dynamic_status == PS3_GUEST_ELF_RELOCATION_REQUIRED);
     CHECK(memory.count == 0u);
     CHECK(ram[0] == 0xa5u && ram[15] == 0xa5u);
 
