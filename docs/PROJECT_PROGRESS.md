@@ -29,10 +29,14 @@ This creates tiny_ps3_test.elf, an ELF64 big-endian PowerPC64 ET_EXEC with one R
 
 ## Next milestones
 
-1. Verify CI for the fixture and guest-runner regression tests.
-2. Connect a test ELF fixture to a native integration test that checks the final guest register state.
-3. Add minimal guest process/runtime setup and explicit syscall/exit handling for a clean stop condition.
-4. Only then try a real, legally obtained homebrew ELF; do not treat commercial game boot as an expected result yet.
+The fixture generation, ELF PT_LOAD loading, bounded entry-point runner, and synthetic final-register integration test are already present. CI has also passed host C/Python tests, generated-code execution on an ARM64 runner, and an Android debug APK build for the previous validated revision.
+
+Next engineering milestones:
+
+1. Add an explicit, tested guest stop/exit contract so a guest program can finish cleanly instead of relying on an artificial branch loop.
+2. Define minimal PowerPC process-entry state (including stack and required register conventions) and test it independently of game code.
+3. Expand instruction semantics in small batches with reference-vs-translated differential tests; reject unsupported instructions explicitly.
+4. Only after those foundations, try a real, legally obtained homebrew ELF. Do not treat commercial game boot as an expected result yet.
 
 ## Additional immediate logical coverage (2026-10-17)
 
