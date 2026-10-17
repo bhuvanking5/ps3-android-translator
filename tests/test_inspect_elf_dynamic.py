@@ -39,8 +39,8 @@ def make_dynamic_elf():
     put32(data, 120, 2)
     put64(data, 128, 0x100)
     put64(data, 136, 0x1100)
-    put64(data, 152, 6 * 16)
-    put64(data, 160, 6 * 16)
+    put64(data, 152, 7 * 16)
+    put64(data, 160, 7 * 16)
 
     entries = [
         (5, 0x1180),   # DT_STRTAB
@@ -48,6 +48,7 @@ def make_dynamic_elf():
         (1, 1),        # DT_NEEDED, offset 1
         (7, 0x11A0),   # DT_RELA
         (8, 24),       # DT_RELASZ
+        (9, 24),       # DT_RELAENT
         (0, 0),        # DT_NULL
     ]
     for i, (tag, value) in enumerate(entries):
@@ -64,7 +65,10 @@ class DynamicELFInspectionTests(unittest.TestCase):
         self.assertEqual(result["needed_libraries"], ["libc_stub.so"])
         self.assertEqual(result["relocation_metadata"]["DT_RELA"], 0x11A0)
         self.assertEqual(result["relocation_metadata"]["DT_RELASZ"], 24)
-        self.assertIn("no relocation", result["limitations"])
+        self.assertEqual(result["relocations"]["DT_RELA"], [
+            {"offset": 0x2000, "symbol_index": 3, "type": 22, "addend": -4}
+        ])
+        self.assertIn("never applied", result["limitations"])
 
     def test_rejects_truncated_program_header_table(self):
         data = make_dynamic_elf()
@@ -75,7 +79,7 @@ class DynamicELFInspectionTests(unittest.TestCase):
     def test_rejects_dynamic_table_without_null_terminator(self):
         data = make_dynamic_elf()
         # Replace the final DT_NULL with a non-null tag.
-        struct.pack_into(">qQ", data, 0x100 + 5 * 16, 99, 0)
+        struct.pack_into(">qQ", data, 0x100 + 6 * 16, 99, 0)
         with self.assertRaisesRegex(ELFInspectionError, "DT_NULL"):
             inspect_dynamic_elf(bytes(data))
 
@@ -83,6 +87,18 @@ class DynamicELFInspectionTests(unittest.TestCase):
         data = make_dynamic_elf()
         struct.pack_into(">qQ", data, 0x100 + 2 * 16, 1, 99)
         with self.assertRaisesRegex(ELFInspectionError, "outside"):
+            inspect_dynamic_elf(bytes(data))
+
+    def test_rejects_relocation_table_outside_file_backed_load_segment(self):
+        data = make_dynamic_elf()
+        struct.pack_into(">qQ", data, 0x100 + 3 * 16, 7, 0x1FFF)
+        with self.assertRaisesRegex(ELFInspectionError, "dynamic pointer"):
+            inspect_dynamic_elf(bytes(data))
+
+    def test_rejects_wrong_rela_entry_size(self):
+        data = make_dynamic_elf()
+        struct.pack_into(">qQ", data, 0x100 + 5 * 16, 9, 16)
+        with self.assertRaisesRegex(ELFInspectionError, "entry size"):
             inspect_dynamic_elf(bytes(data))
 
     def test_reports_no_dynamic_segment(self):
