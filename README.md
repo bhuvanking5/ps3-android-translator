@@ -9,7 +9,7 @@ Experimental research project exploring translation of a **small subset of Power
 - A small PowerPC instruction decoder and reference interpreter, including logical operations and bounded execution for a tiny instruction subset.
 - A defensive PS3-style ELF64/PowerPC64 metadata inspector plus a native bounded PT_LOAD loader that copies an unencrypted ELF into caller-owned guest RAM, zero-fills BSS, applies read/write/execute permissions, and validates that the entry point lies in an executable segment. This is not a complete SELF/ELF game loader.
 - Experimental Python instruction encoding and translation tools for a limited instruction subset.
-- A bounded C PowerPC-to-ARM64 translator for ADDI, ADD, SUBF, MULLD, OR, AND, and XOR. It stores all 32 PowerPC GPRs in a stack-backed frame and uses ARM64 scratch registers for loads, operations, and stores.
+- A bounded C PowerPC-to-ARM64 translator for ADDI, ADD, SUBF, MULLD, register logical operations, and ORI/ORIS/XORI/XORIS immediate logical operations. It stores all 32 PowerPC GPRs in a stack-backed frame and uses ARM64 scratch registers for loads, operations, and stores.
 - An optional CPython extension API, `ps3_native.translate_and_execute_ppc(words, result_gpr)`, that accepts PowerPC instruction words, validates and translates the supported subset, executes the generated ARM64 on AArch64, and compares the result with the reference interpreter.
 - A Python wrapper at `prototype/native_execution.py` for calling that optional native API.
 - An Android JNI smoke-test path that translates a fixed built-in PowerPC arithmetic program, executes the generated ARM64 words, and compares the result against the reference interpreter. It never accepts executable bytes from a selected game file.
@@ -73,3 +73,6 @@ A successful build proves that the prototype compiles and its tests pass; it doe
 ## Next practical milestone
 
 The guest runner can now fetch big-endian instructions only from mapped executable regions, start at a supplied entry point, execute a bounded subset, and stop safely on unsupported instructions, invalid memory, or the step limit. The synthetic integration test loads an ELF, starts at its entry point, and verifies a register result. Next, expand instruction coverage and process/runtime setup. Keep unsupported instructions rejected explicitly. Full PS3 game support remains a much larger project requiring CPU, SPU, memory, operating-system, and graphics emulation.
+
+
+The current logical-immediate subset includes ORI/XORI and ORIS/XORIS, with host and ARM64 differential regression tests. This remains a limited instruction subset and does not establish real PS3 executable compatibility.
