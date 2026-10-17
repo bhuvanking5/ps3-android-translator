@@ -73,6 +73,24 @@ int main(void) {
     CHECK(data[0] == 0u && data[1] == 0u &&
           data[2] == 0u && data[3] == 7u);
 
+    /* Unsupported guest opcodes must stop instead of being silently skipped. */
+    uint8_t invalid_instruction[4] = {0u, 0u, 0u, 0u};
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x3000u, sizeof(invalid_instruction),
+        invalid_instruction, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 99u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x3000u, registers, 4u, &steps) ==
+        PPC_CPU_UNSUPPORTED_INSTRUCTION);
+    CHECK(steps == 1u);
+
+    /* Fetching from unmapped/non-executable memory must fail safely. */
+    ps3_guest_memory_init(&memory);
+    steps = 99u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x4000u, registers, 4u, &steps) ==
+        PPC_CPU_MEMORY_ACCESS_ERROR);
+    CHECK(steps == 0u);
+
     ps3_guest_memory_init(&memory);
     file[71] = 4u;
     CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x1000u,
