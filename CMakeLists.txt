@@ -139,3 +139,14 @@ target_include_directories(test_guest_elf_loader PRIVATE
 )
 target_compile_options(test_guest_elf_loader PRIVATE -Wall -Wextra -Werror)
 add_test(NAME native_guest_elf_loader COMMAND test_guest_elf_loader)
+
+add_executable(test_guest_relocations
+  tests/test_guest_relocations.c
+  android/app/src/main/cpp/guest_relocations.c
+  android/app/src/main/cpp/guest_memory.c
+)
+target_include_directories(test_guest_relocations PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/android/app/src/main/cpp"
+)
+target_compile_options(test_guest_relocations PRIVATE -Wall -Wextra -Werror)
+add_test(NAME native_guest_relocations COMMAND test_guest_relocations)
