@@ -113,6 +113,22 @@ int main(void) {
     CHECK(gpr[7] == 0x1234u);
     CHECK(gpr[9] == 0x00123400u);
 
+    /* SLW/SRW: 32-bit shifts and zero for counts >= 32. */
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t shift_words[] = {
+        addi(3, 0, 0x1234), addi(4, 0, 4),
+        xo(5, 3, 4, 24),       /* slw r5,r3,r4 */
+        xo(6, 3, 4, 536),      /* srw r6,r3,r4 */
+        addi(7, 0, 32),
+        xo(8, 3, 7, 24),       /* shift count 32 => zero */
+        addi(9, 0, 36),
+        xo(10, 3, 9, 536)      /* low six bits 36 => zero */
+    };
+    CHECK(ppc_cpu_run(shift_words, 8, gpr) == PPC_CPU_OK);
+    CHECK(gpr[5] == 0x12340u);
+    CHECK(gpr[6] == 0x123u);
+    CHECK(gpr[8] == 0u && gpr[10] == 0u);
+
     memset(gpr, 0, sizeof(gpr));
     const uint32_t negative[] = { addi(3, 0, -2) };
     CHECK(ppc_cpu_run(negative, 1, gpr) == PPC_CPU_OK);
