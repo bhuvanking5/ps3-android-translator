@@ -14,8 +14,7 @@ prove a file is complete, valid, a PS3 title, or executable.
 
 It deliberately does **not** extract or install packages, decrypt SELF/retail
 content, mount a disc image, enumerate a game filesystem, locate an executable,
-or start a game. The Android app does not yet use this Python tool; its
-existing selected-file path remains limited to raw ELF input.
+or start a game. The Android app now performs its own bounded ISO 9660/UDF signature scan when the first-byte checks do not identify an ELF, PKG, or SELF. This is detection only: it does not mount the image or find/load a game executable.
 
 ## Remaining implementation milestones
 
