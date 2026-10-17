@@ -56,6 +56,9 @@ ps3_guest_reloc_status ps3_guest_relocations_apply(
             if (sum > UINT32_MAX) return PS3_GUEST_RELOC_VALUE_OUT_OF_RANGE;
             staged[i] = (uint32_t)sum;
         } else if (r->type == PS3_PPC64_R_REL32) {
+            if (sum > (uint64_t)INT64_MAX) {
+                return PS3_GUEST_RELOC_VALUE_OUT_OF_RANGE;
+            }
             const int64_t relative = (int64_t)sum -
                                      (int64_t)r->target_address;
             if (relative < INT32_MIN || relative > INT32_MAX) {
