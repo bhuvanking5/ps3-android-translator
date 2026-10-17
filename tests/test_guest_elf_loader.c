@@ -195,6 +195,47 @@ int main(void) {
         sizeof(ram), &entry) == PS3_GUEST_ELF_BAD_FORMAT);
     CHECK(memory.count == 0u);
 
+    /* Reject a truncated program-header table without mapping guest memory. */
+    file[31] = 0u; /* restore entry to 0x10000 */
+    put64(file + 32, 140u); /* one 56-byte header cannot fit from offset 140 */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x10000u,
+        sizeof(ram), &entry) == PS3_GUEST_ELF_BAD_FORMAT);
+    CHECK(memory.count == 0u);
+
+    /* Reject file-backed bytes larger than the segment's memory size. */
+    put64(file + 32, 64u);
+    put64(file + 96, 17u);
+    put64(file + 104, 16u);
+    memset(ram, 0xa5, sizeof(ram));
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x10000u,
+        sizeof(ram), &entry) == PS3_GUEST_ELF_BAD_FORMAT);
+    CHECK(memory.count == 0u);
+    CHECK(ram[0] == 0xa5u && ram[15] == 0xa5u);
+
+    /* Reject a segment that extends one byte past the guest RAM window. */
+    put64(file + 96, 16u);
+    put64(file + 80, 0x10031u);
+    put64(file + 88, 0x10031u);
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x10000u,
+        sizeof(ram), &entry) == PS3_GUEST_ELF_OUT_OF_BOUNDS);
+    CHECK(memory.count == 0u);
+
+    /* A pre-existing mapping collision must be detected before RAM is changed. */
+    put64(file + 80, 0x10000u);
+    put64(file + 88, 0x10000u);
+    uint8_t occupied[16] = {0};
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x10000u, sizeof(occupied), occupied,
+        PS3_GUEST_MEMORY_READ));
+    memset(ram, 0xa5, sizeof(ram));
+    CHECK(ps3_guest_elf_load(file, sizeof(file), &memory, ram, 0x10000u,
+        sizeof(ram), &entry) == PS3_GUEST_ELF_MEMORY_MAP_ERROR);
+    CHECK(memory.count == 1u);
+    CHECK(ram[0] == 0xa5u && ram[15] == 0xa5u);
+
     puts("Native ELF loader and entry-point execution tests passed.");
     return 0;
 }
