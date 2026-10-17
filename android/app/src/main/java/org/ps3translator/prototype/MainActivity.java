@@ -100,8 +100,8 @@ public final class MainActivity extends Activity {
             new Thread(() -> {
                 final String result = nativeRunBuiltinElfTest();
                 runOnUiThread(() -> selectedGame.setText(
-                    "Built-in ELF pipeline test:\\n" + result
-                    + "\\nExpected arithmetic result: r3=7, r4=5, r5=12 (0xc)."));
+                    "Built-in ELF pipeline test:\n" + result
+                    + "\nExpected arithmetic result: r3=7, r4=5, r5=12 (0xc)."));
             }, "ps3-builtin-elf-test").start();
         });
         layout.addView(elfPipelineTest);
