@@ -138,6 +138,18 @@ ppc_cpu_status ppc_cpu_run_with_memory(
             else if (xo == 233u) registers[rt] = registers[ra] * registers[rb];
             else if (xo == 444u) registers[ra] = registers[rt] | registers[rb];
             else if (xo == 28u) registers[ra] = registers[rt] & registers[rb];
+            else if (xo == 24u || xo == 536u) {
+                /* SLW/SRW: 32-bit shifts; any shift count >= 32 yields zero. */
+                const uint32_t source = (uint32_t)registers[rt];
+                const uint64_t shift_count = registers[rb] & 63u;
+                uint32_t result = 0u;
+                if (shift_count < 32u) {
+                    result = xo == 24u
+                        ? (uint32_t)(source << (unsigned)shift_count)
+                        : (uint32_t)(source >> (unsigned)shift_count);
+                }
+                registers[ra] = (uint64_t)result;
+            }
             else if (xo == 316u) registers[ra] = registers[rt] ^ registers[rb];
             else return PPC_CPU_UNSUPPORTED_INSTRUCTION;
         } else {
