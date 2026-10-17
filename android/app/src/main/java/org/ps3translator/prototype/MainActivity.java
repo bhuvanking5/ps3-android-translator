@@ -118,7 +118,7 @@ public final class MainActivity extends Activity {
         launch.setOnClickListener(v -> inspectLaunchSelectedGame());
         layout.addView(launch);
         TextView launchNote = text(
-            "Experimental: attempts a bounded interpreter run only for small, unencrypted ELF64 PowerPC64 files. PKG/SELF games, firmware, OS services and RSX graphics are not implemented.",
+            "Experimental: inspects PKG headers and attempts a bounded interpreter run only for small, unencrypted ELF64 PowerPC64 files. PKG installation/decryption, SELF games, firmware, OS services and RSX graphics are not implemented.",
             13, Color.rgb(255, 205, 130));
         launchNote.setPadding(0, 4, 0, 8);
         launchNote.setLineSpacing(dp(3), 1.0f);
@@ -245,7 +245,7 @@ public final class MainActivity extends Activity {
         simpleEffects.setOnCheckedChangeListener((button, checked) -> prefs.edit().putBoolean("simple_effects", checked).apply());
         layout.addView(simpleEffects);
 
-        TextView caveat = text("This is not yet a PS3 emulator. The experimental launch path only loads a small unencrypted ELF into a bounded guest-memory model and interprets a tiny PowerPC subset. PKG/SELF decryption, installation, relocations, imports, stack/process setup, firmware, SPU and RSX are not implemented. No real PS3 game has booted.", 13, Color.LTGRAY);
+        TextView caveat = text("This is not yet a PS3 emulator. PKG support currently validates bounded header metadata only; it does not extract, decrypt, install or launch PKG contents. The experimental ELF path loads only a small unencrypted ELF into a bounded guest-memory model and interprets a tiny PowerPC subset. SELF handling, full relocations/imports, stack/process setup, firmware, SPU and RSX are not implemented. No real PS3 game has booted.", 13, Color.LTGRAY);
         caveat.setPadding(0, 18, 0, 0);
         caveat.setLineSpacing(dp(3), 1.0f);
         caveat.setBackground(roundedBackground(new int[] {Color.rgb(23, 31, 48), Color.rgb(23, 31, 48)}, dp(14)));
@@ -415,9 +415,7 @@ public final class MainActivity extends Activity {
             }
         } else if (count >= 4 && header[0] == 0x7f && header[1] == 'P'
                 && header[2] == 'K' && header[3] == 'G') {
-            selectedGame.setText("PS3 PKG package header detected. The selected file is recognized, "
-                + "but PKG metadata parsing, package extraction/installation, SELF handling, and "
-                + "the PS3 runtime are not implemented. Game was NOT launched.");
+            inspectPkg(uri);
         } else if (count >= 4 && header[0] == 'S' && header[1] == 'C'
                 && header[2] == 'E' && header[3] == 0) {
             selectedGame.setText("SELF-style signature detected. Encrypted/signed executable handling "
@@ -438,6 +436,37 @@ public final class MainActivity extends Activity {
         }
     }
 
+    private void inspectPkg(Uri uri) {
+        selectedGame.setText("PS3 PKG signature detected. Validating bounded package header…");
+        new Thread(() -> {
+            try {
+                PkgMetadataInspector.Info info =
+                    PkgMetadataInspector.inspect(getContentResolver(), uri);
+                String report = PkgMetadataInspector.format(info);
+                if (info.type == 1 && info.revision == 0) {
+                    try {
+                        report += "\\n\\n" + PkgItemTableInspector.inspect(
+                            getContentResolver(), uri, info);
+                    } catch (java.io.IOException | SecurityException itemError) {
+                        report += "\\n\\nPlaintext item-table inspection stopped safely: "
+                            + itemError.getMessage()
+                            + "\\nNo payload was extracted, installed, or launched.";
+                    }
+                }
+                final String finalReport = report;
+                runOnUiThread(() -> selectedGame.setText(finalReport));
+            } catch (java.io.IOException | SecurityException ex) {
+                runOnUiThread(() -> selectedGame.setText(
+                    "PKG inspection stopped safely: " + ex.getMessage()
+                    + "\nNo package was extracted, installed, or launched."));
+            } catch (RuntimeException ex) {
+                runOnUiThread(() -> selectedGame.setText(
+                    "PKG inspection failed safely (" + ex.getClass().getSimpleName()
+                    + "). No package was extracted, installed, or launched."));
+            }
+        }, "ps3-pkg-header-inspection").start();
+    }
+
     private void inspectIsoImage(Uri uri) {
         selectedGame.setText("ISO 9660 detected. Searching safely for PS3_GAME/USRDIR/EBOOT.BIN…");
         new Thread(() -> {
@@ -452,7 +481,7 @@ public final class MainActivity extends Activity {
                 }
                 if (result.size > 32L * 1024 * 1024) {
                     runOnUiThread(() -> selectedGame.setText(
-                        "Found " + result.path + "\\nSize: " + result.size
+                        "Found " + result.path + "\nSize: " + result.size
                         + " bytes. It exceeds the prototype's 32 MiB executable limit; "
                         + "no file was loaded and no game was launched."));
                     return;
@@ -470,16 +499,16 @@ public final class MainActivity extends Activity {
                             + result.path + ". Trying the bounded experimental interpreter…"));
                         final String runResult = nativeRunSelectedElf(executable);
                         runOnUiThread(() -> selectedGame.setText(
-                            "ISO executable discovery: " + result.path + "\\n"
-                            + "File size: " + result.size + " bytes\\n"
-                            + "Interpreter result:\\n" + runResult
-                            + "\\nThis is not a full PS3 game boot: firmware, imports, "
+                            "ISO executable discovery: " + result.path + "\n"
+                            + "File size: " + result.size + " bytes\n"
+                            + "Interpreter result:\n" + runResult
+                            + "\nThis is not a full PS3 game boot: firmware, imports, "
                             + "SPU and RSX are not implemented."));
                     } else {
                         runOnUiThread(() -> selectedGame.setText(
                             "Found EBOOT.BIN, but its ELF header is not the supported "
                             + "ELF64 big-endian PPC64 format. Path: " + result.path
-                            + "\\nGame was NOT launched."));
+                            + "\nGame was NOT launched."));
                     }
                 } else if (executable.length >= 4 && executable[0] == 'S'
                         && executable[1] == 'C' && executable[2] == 'E'
@@ -496,7 +525,7 @@ public final class MainActivity extends Activity {
             } catch (java.io.IOException | SecurityException ex) {
                 runOnUiThread(() -> selectedGame.setText(
                     "ISO inspection stopped safely: " + ex.getMessage()
-                    + "\\nNo executable was launched."));
+                    + "\nNo executable was launched."));
             } catch (RuntimeException ex) {
                 runOnUiThread(() -> selectedGame.setText(
                     "ISO inspection failed safely (" + ex.getClass().getSimpleName()

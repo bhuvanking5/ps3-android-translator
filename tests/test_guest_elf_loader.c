@@ -232,6 +232,126 @@ int main(void) {
     CHECK(registers[8] == 0x00012340u);
     CHECK(registers[9] == 0x00000123u);
 
+    /* ANDI. in the actual guest runner must update CR0 for a following branch. */
+    uint8_t andi_branch_code[24] = {0};
+    put32(andi_branch_code + 0, 0x38600008u); /* addi r3,0,8 */
+    put32(andi_branch_code + 4, (28u << 26) | (3u << 21) | (4u << 16) | 3u); /* andi. r4,r3,3 => zero */
+    put32(andi_branch_code + 8, 0x41820008u); /* beq cr0,+8 */
+    put32(andi_branch_code + 12, 0x38A00063u); /* addi r5,0,99 (must be skipped) */
+    put32(andi_branch_code + 16, 0x38A0000Cu); /* addi r5,0,12 */
+    put32(andi_branch_code + 20, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5000u, sizeof(andi_branch_code),
+        andi_branch_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5000u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[4] == 0u && registers[5] == 12u);
+
+    /* CMPLWI must compare unsigned words and feed the following conditional branch. */
+    uint8_t cmplwi_branch_code[24] = {0};
+    put32(cmplwi_branch_code + 0, 0x38600008u); /* addi r3,0,8 */
+    put32(cmplwi_branch_code + 4, (10u << 26) | (3u << 16) | 7u); /* cmplwi cr0,r3,7 => GT */
+    put32(cmplwi_branch_code + 8, 0x41810008u); /* bgt cr0,+8 */
+    put32(cmplwi_branch_code + 12, 0x38A00063u); /* addi r5,0,99 (must be skipped) */
+    put32(cmplwi_branch_code + 16, 0x38A0000Cu); /* addi r5,0,12 */
+    put32(cmplwi_branch_code + 20, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5200u, sizeof(cmplwi_branch_code),
+        cmplwi_branch_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5200u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[5] == 12u);
+
+    /* ANDIS. shifts its immediate mask and updates CR0 for conditional branches. */
+    uint8_t andis_branch_code[24] = {0};
+    put32(andis_branch_code + 0, 0x38601234u); /* addi r3,0,0x1234 */
+    put32(andis_branch_code + 4, (29u << 26) | (3u << 21) | (4u << 16) | 1u); /* andis. r4,r3,1 => zero */
+    put32(andis_branch_code + 8, 0x41820008u); /* beq cr0,+8 */
+    put32(andis_branch_code + 12, 0x38A00063u); /* skipped */
+    put32(andis_branch_code + 16, 0x38A0000Cu); /* addi r5,0,12 */
+    put32(andis_branch_code + 20, 0x4e800020u);
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5250u, sizeof(andis_branch_code),
+        andis_branch_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5250u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[4] == 0u && registers[5] == 12u);
+
+    /* RLWIMI inserts only the selected rotated bits and preserves other RA bits. */
+    uint8_t rlwimi_code[12] = {0};
+    put32(rlwimi_code + 0, (20u << 26) | (3u << 21) | (4u << 16) |
+        (8u << 11) | (0u << 6) | (7u << 1)); /* rlwimi r4,r3,8,0,7 */
+    put32(rlwimi_code + 4, 0x4e800020u);
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5270u, 8u, rlwimi_code,
+        PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = 0x12345678u;
+    registers[4] = 0xabcdef01u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5270u, registers, 4u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 2u && (uint32_t)registers[4] ==
+        ((0xabcdef01u & 0x00ffffffu) | (0x34560000u & 0xff000000u)));
+
+    /* PPC64 LD/STD/STDU must preserve big-endian 64-bit values and update RA. */
+    uint8_t doubleword_code[20] = {0};
+    uint8_t doubleword_data[16] = {0};
+    put32(doubleword_code + 0, (62u << 26) | (3u << 21) | (4u << 16)); /* std r3,0(r4) */
+    put32(doubleword_code + 4, (58u << 26) | (5u << 21) | (4u << 16)); /* ld r5,0(r4) */
+    put32(doubleword_code + 8, (62u << 26) | (3u << 21) | (4u << 16) | 9u); /* stdu r3,8(r4) */
+    put32(doubleword_code + 12, (58u << 26) | (6u << 21) | (4u << 16)); /* ld r6,0(r4) */
+    put32(doubleword_code + 16, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5300u, sizeof(doubleword_code),
+        doubleword_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    CHECK(ps3_guest_memory_map(&memory, 0x9000u, sizeof(doubleword_data),
+        doubleword_data, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_WRITE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = UINT64_C(0x12345678abcdef01);
+    registers[4] = 0x9000u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5300u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[5] == UINT64_C(0x12345678abcdef01));
+    CHECK(registers[6] == UINT64_C(0x12345678abcdef01) && registers[4] == 0x9008u);
+    CHECK(doubleword_data[0] == 0x12u && doubleword_data[7] == 0x01u);
+
+    /* Byte/halfword loads and stores preserve big-endian order and sign-extend LHA. */
+    uint8_t narrow_memory_code[40] = {0};
+    uint8_t narrow_data[16] = {0};
+    put32(narrow_memory_code + 0, (44u << 26) | (3u << 21) | (4u << 16)); /* sth r3,0(r4) */
+    put32(narrow_memory_code + 4, (40u << 26) | (5u << 21) | (4u << 16)); /* lhz r5,0(r4) */
+    put32(narrow_memory_code + 8, (42u << 26) | (6u << 21) | (4u << 16)); /* lha r6,0(r4) */
+    put32(narrow_memory_code + 12, (38u << 26) | (3u << 21) | (4u << 16) | 2u); /* stb r3,2(r4) */
+    put32(narrow_memory_code + 16, (34u << 26) | (7u << 21) | (4u << 16) | 2u); /* lbz r7,2(r4) */
+    put32(narrow_memory_code + 20, 0x3860ffffu); /* addi r3,0,-1 */
+    put32(narrow_memory_code + 24, (44u << 26) | (3u << 21) | (4u << 16) | 4u); /* sth r3,4(r4) */
+    put32(narrow_memory_code + 28, (42u << 26) | (8u << 21) | (4u << 16) | 4u); /* lha r8,4(r4) */
+    put32(narrow_memory_code + 32, (40u << 26) | (9u << 21) | (4u << 16) | 4u); /* lhz r9,4(r4) */
+    put32(narrow_memory_code + 36, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5400u, sizeof(narrow_memory_code),
+        narrow_memory_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    CHECK(ps3_guest_memory_map(&memory, 0xa000u, sizeof(narrow_data), narrow_data,
+        PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_WRITE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = 0x1234u;
+    registers[4] = 0xa000u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5400u, registers, 12u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 10u && registers[5] == 0x1234u && registers[6] == 0x1234u);
+    CHECK(registers[7] == 0x34u && registers[8] == UINT64_MAX && registers[9] == 0xffffu);
+    CHECK(narrow_data[0] == 0x12u && narrow_data[1] == 0x34u &&
+        narrow_data[2] == 0x34u && narrow_data[4] == 0xffu && narrow_data[5] == 0xffu);
+
     /* Fetching from unmapped/non-executable memory must fail safely. */
     ps3_guest_memory_init(&memory);
     steps = 99u;
@@ -450,6 +570,69 @@ int main(void) {
     CHECK(import_calls == 1 && memory.count == 0u &&
           dynamic_ram[0] == 0xa5u && dynamic_ram[0xa0] == 0xa5u &&
           dynamic_ram[511] == 0xa5u);
+
+    /* Indexed X-form byte/halfword/word memory operations used by PPC code. */
+    uint8_t indexed_code[36] = {0};
+    uint8_t indexed_data[16] = {0};
+    put32(indexed_code + 0, (31u << 26) | (3u << 21) | (4u << 16) |
+        (5u << 11) | (151u << 1)); /* stwx r3,r4,r5 */
+    put32(indexed_code + 4, (31u << 26) | (6u << 21) | (4u << 16) |
+        (5u << 11) | (23u << 1)); /* lwzx r6,r4,r5 */
+    put32(indexed_code + 8, (31u << 26) | (3u << 21) | (4u << 16) |
+        (5u << 11) | (215u << 1)); /* stbx r3,r4,r5 */
+    put32(indexed_code + 12, (31u << 26) | (7u << 21) | (4u << 16) |
+        (5u << 11) | (87u << 1)); /* lbzx r7,r4,r5 */
+    put32(indexed_code + 16, 0x38A00006u); /* addi r5,0,6 */
+    put32(indexed_code + 20, (31u << 26) | (3u << 21) | (4u << 16) |
+        (5u << 11) | (407u << 1)); /* sthx r3,r4,r5 */
+    put32(indexed_code + 24, (31u << 26) | (8u << 21) | (4u << 16) |
+        (5u << 11) | (279u << 1)); /* lhzx r8,r4,r5 */
+    put32(indexed_code + 28, (31u << 26) | (9u << 21) | (4u << 16) |
+        (5u << 11) | (343u << 1)); /* lhax r9,r4,r5 */
+    put32(indexed_code + 32, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5600u, sizeof(indexed_code),
+        indexed_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    CHECK(ps3_guest_memory_map(&memory, 0xb000u, sizeof(indexed_data), indexed_data,
+        PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_WRITE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = 0x12345678u;
+    registers[4] = 0xb000u;
+    registers[5] = 0u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5600u, registers, 12u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 9u && registers[6] == 0x12345678u);
+    CHECK(registers[7] == 0x78u && registers[8] == 0x5678u &&
+        registers[9] == 0x5678u);
+    CHECK(indexed_data[0] == 0x78u && indexed_data[1] == 0x34u &&
+        indexed_data[2] == 0x56u && indexed_data[3] == 0x78u &&
+        indexed_data[6] == 0x56u && indexed_data[7] == 0x78u);
+
+    /* PPC64 EXTSW and CNTLZW cover common sign-extension/bit-scan patterns. */
+    uint8_t word_ops_code[20] = {0};
+    put32(word_ops_code + 0, (31u << 26) | (3u << 21) | (4u << 16) |
+        (986u << 1)); /* extsw r4,r3 */
+    put32(word_ops_code + 4, (31u << 26) | (5u << 21) | (6u << 16) |
+        (26u << 1)); /* cntlzw r6,r5 */
+    put32(word_ops_code + 8, (31u << 26) | (7u << 21) | (8u << 16) |
+        (26u << 1)); /* cntlzw r8,r7 */
+    put32(word_ops_code + 12, (31u << 26) | (9u << 21) | (10u << 16) |
+        (26u << 1)); /* cntlzw r10,r9 */
+    put32(word_ops_code + 16, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x5700u, sizeof(word_ops_code),
+        word_ops_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    registers[3] = UINT64_C(0x00000000f1234567);
+    registers[5] = 0x00000001u;
+    registers[7] = 0x80000000u;
+    registers[9] = 0u;
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x5700u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 5u && registers[4] == UINT64_C(0xfffffffff1234567));
+    CHECK(registers[6] == 31u && registers[8] == 0u && registers[10] == 32u);
 
     puts("Native ELF loader and entry-point execution tests passed.");
     return 0;

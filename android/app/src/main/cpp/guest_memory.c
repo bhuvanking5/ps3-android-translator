@@ -35,13 +35,13 @@ int ps3_guest_memory_map(ps3_guest_memory *memory, uint32_t base,
 }
 
 static ps3_guest_memory_region *find_region(ps3_guest_memory *memory,
-    uint32_t address, unsigned permission) {
+    uint32_t address, unsigned permission, uint32_t width) {
     if (memory == 0) return 0;
     for (size_t i = 0; i < memory->count; ++i) {
         ps3_guest_memory_region *region = &memory->regions[i];
         if ((region->permissions & permission) == 0u) continue;
         if (address >= region->base &&
-            (uint64_t)address + 4u <= (uint64_t)region->base + region->size)
+            (uint64_t)address + width <= (uint64_t)region->base + region->size)
             return region;
     }
     return 0;
@@ -51,7 +51,7 @@ int ps3_guest_memory_read32(void *context, uint32_t address, uint32_t *value) {
     if (context == 0 || value == 0 || (address & 3u) != 0u) return 0;
     ps3_guest_memory *memory = (ps3_guest_memory *)context;
     ps3_guest_memory_region *region =
-        find_region(memory, address, PS3_GUEST_MEMORY_READ);
+        find_region(memory, address, PS3_GUEST_MEMORY_READ, 4u);
     if (region == 0) return 0;
     const size_t offset = (size_t)(address - region->base);
     const uint8_t *p = region->bytes + offset;
@@ -64,7 +64,7 @@ int ps3_guest_memory_fetch32(void *context, uint32_t address, uint32_t *value) {
     if (context == 0 || value == 0 || (address & 3u) != 0u) return 0;
     ps3_guest_memory *memory = (ps3_guest_memory *)context;
     ps3_guest_memory_region *region =
-        find_region(memory, address, PS3_GUEST_MEMORY_EXECUTE);
+        find_region(memory, address, PS3_GUEST_MEMORY_EXECUTE, 4u);
     if (region == 0) return 0;
     const size_t offset = (size_t)(address - region->base);
     const uint8_t *p = region->bytes + offset;
@@ -77,7 +77,7 @@ int ps3_guest_memory_write32(void *context, uint32_t address, uint32_t value) {
     if (context == 0 || (address & 3u) != 0u) return 0;
     ps3_guest_memory *memory = (ps3_guest_memory *)context;
     ps3_guest_memory_region *region =
-        find_region(memory, address, PS3_GUEST_MEMORY_WRITE);
+        find_region(memory, address, PS3_GUEST_MEMORY_WRITE, 4u);
     if (region == 0) return 0;
     const size_t offset = (size_t)(address - region->base);
     uint8_t *p = region->bytes + offset;
@@ -85,5 +85,76 @@ int ps3_guest_memory_write32(void *context, uint32_t address, uint32_t value) {
     p[1] = (uint8_t)(value >> 16);
     p[2] = (uint8_t)(value >> 8);
     p[3] = (uint8_t)value;
+    return 1;
+}
+
+int ps3_guest_memory_read8(void *context, uint32_t address, uint8_t *value) {
+    if (context == 0 || value == 0) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_READ, 1u);
+    if (region == 0) return 0;
+    *value = region->bytes[(size_t)(address - region->base)];
+    return 1;
+}
+
+int ps3_guest_memory_read16(void *context, uint32_t address, uint16_t *value) {
+    if (context == 0 || value == 0 || (address & 1u) != 0u) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_READ, 2u);
+    if (region == 0) return 0;
+    const uint8_t *p = region->bytes + (size_t)(address - region->base);
+    *value = (uint16_t)(((uint16_t)p[0] << 8) | p[1]);
+    return 1;
+}
+
+int ps3_guest_memory_write8(void *context, uint32_t address, uint8_t value) {
+    if (context == 0) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_WRITE, 1u);
+    if (region == 0) return 0;
+    region->bytes[(size_t)(address - region->base)] = value;
+    return 1;
+}
+
+int ps3_guest_memory_write16(void *context, uint32_t address, uint16_t value) {
+    if (context == 0 || (address & 1u) != 0u) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_WRITE, 2u);
+    if (region == 0) return 0;
+    uint8_t *p = region->bytes + (size_t)(address - region->base);
+    p[0] = (uint8_t)(value >> 8);
+    p[1] = (uint8_t)value;
+    return 1;
+}
+
+int ps3_guest_memory_read64(void *context, uint32_t address, uint64_t *value) {
+    if (context == 0 || value == 0 || (address & 7u) != 0u) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_READ, 8u);
+    if (region == 0) return 0;
+    const uint8_t *p = region->bytes + (size_t)(address - region->base);
+    *value = ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) |
+             ((uint64_t)p[2] << 40) | ((uint64_t)p[3] << 32) |
+             ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
+             ((uint64_t)p[6] << 8) | (uint64_t)p[7];
+    return 1;
+}
+
+int ps3_guest_memory_write64(void *context, uint32_t address, uint64_t value) {
+    if (context == 0 || (address & 7u) != 0u) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_WRITE, 8u);
+    if (region == 0) return 0;
+    uint8_t *p = region->bytes + (size_t)(address - region->base);
+    p[0] = (uint8_t)(value >> 56); p[1] = (uint8_t)(value >> 48);
+    p[2] = (uint8_t)(value >> 40); p[3] = (uint8_t)(value >> 32);
+    p[4] = (uint8_t)(value >> 24); p[5] = (uint8_t)(value >> 16);
+    p[6] = (uint8_t)(value >> 8); p[7] = (uint8_t)value;
     return 1;
 }
