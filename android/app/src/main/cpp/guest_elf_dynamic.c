@@ -85,6 +85,7 @@ ps3_guest_dynamic_status ps3_guest_elf_parse_rela(
         return PS3_GUEST_DYNAMIC_UNSUPPORTED;
     }
 
+    fprintf(stderr, "DBG header ok\\n");
     const uint64_t phoff = read_be64(file + 32u);
     const uint16_t phentsize = read_be16(file + 54u);
     const uint16_t phnum = read_be16(file + 56u);
@@ -190,6 +191,7 @@ ps3_guest_dynamic_status ps3_guest_elf_parse_rela(
         }
     }
 
+    fprintf(stderr, "DBG dyn rela=%llx size=%llu symtab=%llx syment=%llu strtab=%llx strsz=%llu\\n", (unsigned long long)rela_address, (unsigned long long)rela_size, (unsigned long long)symbol_table_address, (unsigned long long)symbol_entry_size, (unsigned long long)string_table_address, (unsigned long long)string_table_size);
     const uint64_t relocation_count64 = rela_size / ELF64_RELA_SIZE;
     if (relocation_count64 > record_capacity ||
         relocation_count64 > PS3_GUEST_ELF_DYNAMIC_MAX_RELOCS) {
@@ -213,6 +215,7 @@ ps3_guest_dynamic_status ps3_guest_elf_parse_rela(
         int target_is_writable = 0;
         uint64_t symbol_value = 0u;
 
+        fprintf(stderr, "DBG reloc %zu type=%u sym=%u target=%llx\\n", i, relocation_type, symbol_index, (unsigned long long)target);
         if (relocation_type != PS3_PPC64_R_ADDR32 &&
             relocation_type != PS3_PPC64_R_REL32) {
             return PS3_GUEST_DYNAMIC_UNSUPPORTED;
