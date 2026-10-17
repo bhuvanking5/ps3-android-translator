@@ -60,6 +60,19 @@ int ps3_guest_memory_read32(void *context, uint32_t address, uint32_t *value) {
     return 1;
 }
 
+int ps3_guest_memory_fetch32(void *context, uint32_t address, uint32_t *value) {
+    if (context == 0 || value == 0 || (address & 3u) != 0u) return 0;
+    ps3_guest_memory *memory = (ps3_guest_memory *)context;
+    ps3_guest_memory_region *region =
+        find_region(memory, address, PS3_GUEST_MEMORY_EXECUTE);
+    if (region == 0) return 0;
+    const size_t offset = (size_t)(address - region->base);
+    const uint8_t *p = region->bytes + offset;
+    *value = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
+             ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+    return 1;
+}
+
 int ps3_guest_memory_write32(void *context, uint32_t address, uint32_t value) {
     if (context == 0 || (address & 3u) != 0u) return 0;
     ps3_guest_memory *memory = (ps3_guest_memory *)context;
