@@ -205,6 +205,33 @@ int main(void) {
     CHECK(registers[4] == 0xABCD1234u);
     CHECK(registers[5] == (0xABCD1234u ^ 0x00FF0000u));
 
+    /* The actual guest-memory runner must support the newly tested rotate/shift subset. */
+    uint8_t rotate_shift_code[32] = {0};
+    put32(rotate_shift_code + 0, 0x38601234u); /* addi r3,0,0x1234 */
+    put32(rotate_shift_code + 4, 0x38800008u); /* addi r4,0,8 */
+    put32(rotate_shift_code + 8, (21u << 26) | (3u << 21) | (5u << 16) |
+        (8u << 11) | (31u << 1)); /* rlwinm r5,r3,8,0,31 */
+    put32(rotate_shift_code + 12, (23u << 26) | (3u << 21) | (6u << 16) |
+        (4u << 11) | (31u << 1)); /* rlwnm r6,r3,r4,0,31 */
+    put32(rotate_shift_code + 16, 0x38E00004u); /* addi r7,0,4 */
+    put32(rotate_shift_code + 20, (31u << 26) | (3u << 21) | (8u << 16) |
+        (7u << 11) | (24u << 1)); /* slw r8,r3,r7 */
+    put32(rotate_shift_code + 24, (31u << 26) | (3u << 21) | (9u << 16) |
+        (7u << 11) | (536u << 1)); /* srw r9,r3,r7 */
+    put32(rotate_shift_code + 28, 0x4e800020u); /* blr */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x6000u, sizeof(rotate_shift_code),
+        rotate_shift_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 0u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x6000u, registers, 8u, &steps) ==
+        PPC_CPU_GUEST_EXIT);
+    CHECK(steps == 8u);
+    CHECK(registers[5] == 0x00123400u);
+    CHECK(registers[6] == 0x00123400u);
+    CHECK(registers[8] == 0x00012340u);
+    CHECK(registers[9] == 0x00000123u);
+
     /* Fetching from unmapped/non-executable memory must fail safely. */
     ps3_guest_memory_init(&memory);
     steps = 99u;
