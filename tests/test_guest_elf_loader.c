@@ -120,6 +120,17 @@ int main(void) {
         PPC_CPU_UNSUPPORTED_INSTRUCTION);
     CHECK(steps == 1u);
 
+    /* The ELF-entry guest runner must reject record-form ops it cannot update. */
+    uint8_t record_form_code[4] = {0x7cu, 0xa3u, 0x22u, 0x15u}; /* add. r5,r3,r4 */
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_memory_map(&memory, 0x3000u, sizeof(record_form_code),
+        record_form_code, PS3_GUEST_MEMORY_READ | PS3_GUEST_MEMORY_EXECUTE));
+    memset(registers, 0, sizeof(registers));
+    steps = 99u;
+    CHECK(ppc_cpu_run_guest(&memory, 0x3000u, registers, 4u, &steps) ==
+        PPC_CPU_UNSUPPORTED_INSTRUCTION);
+    CHECK(steps == 1u);
+
     /* Fetching from unmapped/non-executable memory must fail safely. */
     ps3_guest_memory_init(&memory);
     steps = 99u;
