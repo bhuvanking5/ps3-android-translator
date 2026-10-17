@@ -73,7 +73,9 @@ ps3_guest_elf_status ps3_guest_elf_load(
 
     for (uint16_t i = 0; i < phnum; ++i) {
         const uint8_t *ph = file + (size_t)(phoff + (uint64_t)i * phentsize);
-        const uint32_t program_type = be32(ph);\n        if (program_type == ELF_PT_DYNAMIC) return PS3_GUEST_ELF_RELOCATION_REQUIRED;\n        if (program_type != ELF_PT_LOAD) continue;
+        const uint32_t program_type = be32(ph);
+        if (program_type == ELF_PT_DYNAMIC) return PS3_GUEST_ELF_RELOCATION_REQUIRED;
+        if (program_type != ELF_PT_LOAD) continue;
         if (segment_count >= PS3_GUEST_MEMORY_MAX_REGIONS) {
             return PS3_GUEST_ELF_UNSUPPORTED;
         }
