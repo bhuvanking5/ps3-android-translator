@@ -49,6 +49,17 @@ class CPUState:
             ) & MASK64
             self.pc = old_pc + 4
 
+        elif op in ("ori", "oris", "xori", "xoris"):
+            immediate = ins["immediate"]
+            if op in ("oris", "xoris"):
+                immediate <<= 16
+            if op in ("ori", "oris"):
+                result = self.gpr[ins["rt"]] | immediate
+            else:
+                result = self.gpr[ins["rt"]] ^ immediate
+            self.gpr[ins["ra"]] = result & MASK64
+            self.pc = old_pc + 4
+
         elif op == "or":
             if ins["record"]:
                 raise ValueError("The or record form is not supported yet")
