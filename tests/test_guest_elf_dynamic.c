@@ -13,6 +13,13 @@ static int resolve_foo(const char *name, uint64_t *value, void *context) {
     *value = 0x1020u;
     return 1;
 }
+static int resolve_too_high(const char *name, uint64_t *value, void *context) {
+    int *calls = (int *)context;
+    ++*calls;
+    if (strcmp(name, "foo") != 0) return 0;
+    *value = (uint64_t)UINT32_MAX + 1u;
+    return 1;
+}
 int main(void) {
     uint8_t f[448] = {0};
     memcpy(f, "\x7f" "ELF", 4u);
@@ -54,6 +61,27 @@ int main(void) {
     resolver_calls = 0;
     CHECK(ps3_guest_elf_parse_rela(f, sizeof(f), out, 4, &n, resolve_foo, &resolver_calls) == PS3_GUEST_DYNAMIC_OK);
     CHECK(resolver_calls == 1);
+
+    /* A resolver must never smuggle a 64-bit address into the 32-bit guest model. */
+    resolver_calls = 0;
+    CHECK(ps3_guest_elf_parse_rela(f, sizeof(f), out, 4, &n,
+        resolve_too_high, &resolver_calls) == PS3_GUEST_DYNAMIC_UNSUPPORTED);
+    CHECK(resolver_calls == 1);
+
+    /* Undefined import names must be NUL-terminated within DT_STRSZ. */
+    memset(f + 416, 'x', 16u);
+    resolver_calls = 0;
+    CHECK(ps3_guest_elf_parse_rela(f, sizeof(f), out, 4, &n,
+        resolve_foo, &resolver_calls) == PS3_GUEST_DYNAMIC_BAD_FORMAT);
+    CHECK(resolver_calls == 0);
+    f[416] = 0;
+    memcpy(f + 417, "foo", 4u);
+
+    /* Referenced symbol entries must be file-backed, not merely in-range addresses. */
+    p64(f + 232, 0x2000u);
+    CHECK(ps3_guest_elf_parse_rela(f, sizeof(f), out, 4, &n,
+        resolve_foo, &resolver_calls) == PS3_GUEST_DYNAMIC_UNSUPPORTED);
+    p64(f + 232, 0x10c0u);
     p16(f + 398, 1);
 
     p64(f + 352, 999u);
