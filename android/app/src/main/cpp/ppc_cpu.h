@@ -13,7 +13,9 @@ typedef enum {
     PPC_CPU_INSTRUCTION_LIMIT,
     PPC_CPU_STEP_LIMIT,
     PPC_CPU_UNSUPPORTED_INSTRUCTION,
-    PPC_CPU_MEMORY_ACCESS_ERROR
+    PPC_CPU_MEMORY_ACCESS_ERROR,
+    /* Prototype top-level return: exact BLR with the runner's return sentinel. */
+    PPC_CPU_GUEST_EXIT
 } ppc_cpu_status;
 
 /* Return nonzero on a successful 32-bit guest read, zero on an unmapped read. */
