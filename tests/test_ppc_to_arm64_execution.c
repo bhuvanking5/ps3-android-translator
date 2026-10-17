@@ -153,6 +153,18 @@ int main(void) {
         return 1;
     }
 
+    /* Negative ADDIS must sign-extend before shifting, including RA != 0. */
+    const uint32_t addis_negative_program[] = {
+        (14u << 26) | (3u << 21) | 0x1000u,
+        (15u << 26) | (4u << 21) | (3u << 16) | 0xFFFEu
+    };
+    if (check_program("ADDIS negative shifted immediate",
+            addis_negative_program,
+            sizeof(addis_negative_program) / sizeof(addis_negative_program[0]),
+            4u, UINT64_MAX - 126975u) != 0) {
+        return 1;
+    }
+
     const uint32_t shifted_logical_program[] = {
         (14u << 26) | (3u << 21) | 0x1234u,
         (25u << 26) | (3u << 21) | (4u << 16) | 0xABCDu,
