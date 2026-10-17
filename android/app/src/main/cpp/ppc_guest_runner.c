@@ -128,6 +128,32 @@ ppc_cpu_status ppc_cpu_run_guest(void *memory_context, uint32_t entry_point,
                 return PPC_CPU_MEMORY_ACCESS_ERROR;
             }
             if (xo == 1u) registers[ra] = address;
+        } else if (opcode == 34u || opcode == 38u ||
+                   opcode == 40u || opcode == 42u || opcode == 44u) {
+            /* LBZ/STB, LHZ/LHA/STH; halfword values use big-endian memory. */
+            const uint32_t address = (uint32_t)((ra == 0u ? 0u : registers[ra]) +
+                (uint64_t)(int64_t)sign16(ins));
+            int ok = 0;
+            if (opcode == 34u) {
+                uint8_t value = 0u;
+                ok = ps3_guest_memory_read8(memory_context, address, &value);
+                if (ok) registers[rt] = value;
+            } else if (opcode == 40u || opcode == 42u) {
+                uint16_t value = 0u;
+                ok = ps3_guest_memory_read16(memory_context, address, &value);
+                if (ok) registers[rt] = opcode == 42u
+                    ? (uint64_t)(int64_t)(int16_t)value : (uint64_t)value;
+            } else if (opcode == 38u) {
+                ok = ps3_guest_memory_write8(memory_context, address,
+                    (uint8_t)registers[rt]);
+            } else {
+                ok = ps3_guest_memory_write16(memory_context, address,
+                    (uint16_t)registers[rt]);
+            }
+            if (!ok) {
+                if (steps_executed != 0) *steps_executed = steps;
+                return PPC_CPU_MEMORY_ACCESS_ERROR;
+            }
         } else if (opcode == 32u) {
             const uint32_t address = (uint32_t)((ra == 0u ? 0u : registers[ra]) +
                 (uint64_t)(int64_t)sign16(ins));
