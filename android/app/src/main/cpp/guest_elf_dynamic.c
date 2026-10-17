@@ -39,15 +39,18 @@ ps3_guest_dynamic_status ps3_guest_elf_parse_rela(const uint8_t*f,size_t n,ps3_g
  if(b16(f+16)!=ET_EXEC)return PS3_GUEST_DYNAMIC_UNSUPPORTED;
  uint64_t po=b64(f+32);uint16_t pe=b16(f+54),pn=b16(f+56);
  if(pe<PH||pn>MAX_PHDRS||po>n||(uint64_t)pn>((uint64_t)n-po)/pe)return PS3_GUEST_DYNAMIC_BAD_FORMAT;
- seg ss[MAX_PHDRS];size_t sn=0;uint64_t doff=0,dsz=0;int hd=0;
+ seg ss[MAX_PHDRS];size_t sn=0;uint64_t doff=0,dva=0,dsz=0;int hd=0;
  for(uint16_t i=0;i<pn;i++){
   const uint8_t*p=f+(size_t)(po+(uint64_t)i*pe);uint32_t t=b32(p);
   if(t==PT_LOAD){seg*s=&ss[sn++];s->flags=b32(p+4);s->off=b64(p+8);s->va=b64(p+16);s->fs=b64(p+32);s->ms=b64(p+40);
    if(s->fs>s->ms||!range_ok(n,s->off,s->fs)||s->va>UINT64_MAX-s->ms)return PS3_GUEST_DYNAMIC_BAD_FORMAT;
-  }else if(t==PT_DYNAMIC){if(hd)return PS3_GUEST_DYNAMIC_BAD_FORMAT;hd=1;doff=b64(p+8);dsz=b64(p+32);
+  }else if(t==PT_DYNAMIC){if(hd)return PS3_GUEST_DYNAMIC_BAD_FORMAT;hd=1;doff=b64(p+8);dva=b64(p+16);dsz=b64(p+32);
    if(!dsz||dsz%DYNENT||!range_ok(n,doff,dsz)||dsz/DYNENT>MAX_DYN)return PS3_GUEST_DYNAMIC_BAD_FORMAT;}
  }
  if(!hd)return PS3_GUEST_DYNAMIC_BAD_FORMAT;
+ uint64_t dynamic_mapped_offset=0;
+ if(!v2f(ss,sn,dva,dsz,&dynamic_mapped_offset)||dynamic_mapped_offset!=doff)
+  return PS3_GUEST_DYNAMIC_BAD_FORMAT;
  uint64_t rv=0,rs=0,re=0;int hr=0,hs=0,he=0,term=0;
  for(uint64_t o=0;o<dsz;o+=DYNENT){const uint8_t*p=f+(size_t)(doff+o);int64_t tag=(int64_t)b64(p);uint64_t v=b64(p+8);
   if(tag==DT_NULL){term=1;break;}if(tag==DT_RELA){rv=v;hr=1;}else if(tag==DT_RELASZ){rs=v;hs=1;}else if(tag==DT_RELAENT){re=v;he=1;}
