@@ -154,8 +154,21 @@ Java_org_ps3translator_prototype_MainActivity_nativeRunSelectedElf(
             "This prototype cannot construct a safe initial guest stack.");
     }
 
+    /*
+     * Minimal ELF process-entry vector for standalone fixtures/homebrew:
+     * argc=0, argv[0]=NULL, envp[0]=NULL, auxv[AT_NULL]=0.
+     * PPC64 values are stored big-endian. This is intentionally not claimed
+     * to reproduce the full PS3 loader ABI (TLS, process parameters and OS
+     * startup services are still absent).
+     */
+    const uint32_t initial_sp = (stack_top - 48u) & ~15u;
+    for (uint32_t i = 0u; i < 48u; ++i) ram[initial_sp + i] = 0u;
+    /* auxv begins after argc, argv terminator and envp terminator. */
+    ram[initial_sp + 24u] = 0u; /* AT_NULL type */
+    ram[initial_sp + 32u] = 0u; /* AT_NULL value */
+
     uint64_t gpr[32] = {0};
-    gpr[1] = (uint64_t)(stack_top & ~15u); /* PPC ABI stack pointer, 16-byte aligned */
+    gpr[1] = initial_sp;
     size_t steps = 0u;
     const ppc_cpu_status run_status = ppc_cpu_run_guest(
         &memory, entry, gpr, 1024u, &steps);
