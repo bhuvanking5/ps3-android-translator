@@ -84,7 +84,7 @@ public final class MainActivity extends Activity {
         layout.addView(selectedGame);
 
         Button launch = new Button(this);
-        launch.setText("Inspect and launch selected game");
+        launch.setText("Inspect selected game file");
         launch.setOnClickListener(v -> inspectLaunchSelectedGame());
         layout.addView(launch);
         TextView launchNote = text(
@@ -313,6 +313,11 @@ public final class MainActivity extends Activity {
                 selectedGame.setText("ELF header detected, but it does not match the expected "
                     + "ELF64 big-endian PowerPC64 signature. Game was NOT launched.");
             }
+        } else if (count >= 4 && header[0] == 0x7f && header[1] == 'P'
+                && header[2] == 'K' && header[3] == 'G') {
+            selectedGame.setText("PS3 PKG package header detected. The selected file is recognized, "
+                + "but PKG metadata parsing, package extraction/installation, SELF handling, and "
+                + "the PS3 runtime are not implemented. Game was NOT launched.");
         } else if (count >= 4 && header[0] == 'S' && header[1] == 'C'
                 && header[2] == 'E' && header[3] == 0) {
             selectedGame.setText("SELF-style signature detected. Encrypted/signed executable handling "
