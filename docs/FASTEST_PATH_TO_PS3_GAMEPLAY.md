@@ -27,3 +27,19 @@ Before promising performance, record the device SoC, RAM, Android version, GPU/V
 ## Definition of success for the next 1–2 hours
 
 A reproducible successful build, clear device compatibility findings, and a tested next step are achievable milestones. A new PS3 emulator capable of 30–45 FPS across games is not realistically achievable from this prototype in that time.
+
+
+## Immediate practical route (checked 2026-10-17)
+
+A maintained Android-oriented PS3 emulator project exists: [ARMSX3](https://github.com/ARMSX2/ARMSX3), an Android port based on RPCS3. Its [official 1.2 release](https://github.com/ARMSX2/ARMSX3/releases/tag/1.2) publishes multiple APK variants, including a **legacy ARMv8.1 / Android SDK 30** build:
+
+- [ARMSX3 1.2 legacy ARMv8.1 / SDK 30 APK](https://github.com/ARMSX2/ARMSX3/releases/download/1.2/ARMSX3-1.2-legacy-armv8.1-sdk30.apk)
+- [Official release page with all variants and notes](https://github.com/ARMSX2/ARMSX3/releases/tag/1.2)
+
+This is the fastest way to test real PS3 emulation without waiting for this small prototype to become a complete emulator. The legacy variant is the most sensible first compatibility test for an Android 11 device, but it is **not a guarantee** that the Xiaomi Mi A3's GPU/driver and performance will be sufficient. Install only from the official release page, read the release notes, and use the PS3 firmware and game files you are legally entitled to use. Firmware is not bundled with the app. Keep expectations modest on Snapdragon 665; some games may not boot or may run too slowly.
+
+The official build instructions require a full Android toolchain and describe a very large native core build, so attempting to recreate the full emulator core inside this tiny repository or a quick CI run is not the fastest route. Keep this repo as the research/test project unless a deliberate, license-compliant core integration is planned.
+
+## Decision
+
+For the user's immediate goal, test the official legacy APK first. For this repository, prioritize verified loader/runtime tests and compatibility research; do not advertise it as game-capable until a real game is demonstrated working.
