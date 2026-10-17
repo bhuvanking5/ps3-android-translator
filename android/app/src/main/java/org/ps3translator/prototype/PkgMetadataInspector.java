@@ -211,6 +211,8 @@ final class PkgMetadataInspector {
             case 4: return "Package size";
             case 5: return "Package revision/version";
             case 7: return "QA digest";
+            case 13: return "Item-table location/size metadata";
+            case 14: return "PARAM.SFO location/size metadata";
             default: return "Unknown metadata";
         }
     }
