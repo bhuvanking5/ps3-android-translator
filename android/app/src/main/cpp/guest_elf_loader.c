@@ -48,6 +48,8 @@ ps3_guest_elf_status ps3_guest_elf_load(
         be16(file + 52) < ELF_HEADER_SIZE) return PS3_GUEST_ELF_UNSUPPORTED;
 
     const uint64_t entry = be64(file + 24);
+    /* PowerPC instructions are 4-byte aligned; reject malformed entry PCs. */
+    if ((entry & 3u) != 0u) return PS3_GUEST_ELF_BAD_FORMAT;
     const uint64_t phoff = be64(file + 32);
     const uint16_t phentsize = be16(file + 54);
     const uint16_t phnum = be16(file + 56);
