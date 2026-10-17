@@ -44,6 +44,14 @@ The Android UI now has a **Run built-in ELF execution test** button. It synthesi
 
 This is a useful device-side smoke test for the JNI → ELF loader → guest memory → PowerPC interpreter path. It is **not a PS3 game**, and reaching the step limit is expected for this fixture's intentional self-branch. The selected-file path is limited to raw ELF files no larger than 32 MiB, and the current guest RAM window is 64 MiB. PKG extraction/installation, SELF decryption, dynamic linking, process/stack setup, system services, SPU, and RSX remain missing. No real PS3 game has booted.
 
+## Container-format and real-game compatibility status (2026-10-17)
+
+- **Real PS3 games successfully booted: 0.** Therefore the measured real-game boot success rate is 0% (0 known successful boots); this is not a claim that exactly 0% of all possible games could ever work.
+- **PKG:** only the package magic/header is recognized by the Android UI. Package parsing/extraction, content decryption where applicable, installation metadata, SELF processing, executable loading, and runtime integration are not implemented.
+- **ISO:** the UI now gives a specific warning when the selected document's display name ends in `.iso`. This is filename-based identification only, not validation of the disc image. PS3 disc filesystem parsing, decryption where applicable, executable discovery, and game boot are still not implemented.
+- **Raw ELF:** a restricted, unencrypted big-endian ELF64/PPC64 ET_EXEC path exists, with a 32 MiB input limit and 64 MiB guest RAM window. This is not a general PS3 game loader.
+- **Build/CI success is not game compatibility.** No playable game, frame rate, or compatibility percentage is currently established.
+
 ## Additional immediate logical coverage (2026-10-17)
 
 The bounded native PowerPC interpreter and experimental AArch64 translator now include ORIS and XORIS (opcodes 25 and 27) alongside ORI/XORI. These instructions shift the 16-bit immediate left by 16 before applying OR/XOR. Regression tests cover the C reference interpreter, Python reference decoder/execution, translation acceptance, and the native ARM64 differential test path.
