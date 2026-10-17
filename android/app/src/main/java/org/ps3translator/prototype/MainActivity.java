@@ -396,7 +396,7 @@ public final class MainActivity extends Activity {
             : String.format(java.util.Locale.ROOT, "Size: %.2f MiB", size / (1024.0 * 1024.0));
         return "Selected: " + (displayName == null ? "Unknown file" : displayName)
             + "\n" + sizeText + "\nFormat hint: " + format
-            + "\nSaved for library testing only. No file contents are loaded or executed; PS3 game launching is not implemented.";
+            + "\nSmall unencrypted ELF64/PPC64 files can be tried in the bounded experimental interpreter. PKG/SELF game boot is not implemented.";
     }
 
     private static native String nativeStatus();
