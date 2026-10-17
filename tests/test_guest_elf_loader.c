@@ -17,6 +17,22 @@ static void put64(uint8_t *p, uint64_t v) {
     put32(p, (uint32_t)(v >> 32)); put32(p + 4, (uint32_t)v);
 }
 
+static int allow_foo_import(const char *name, uint64_t *value, void *context) {
+    int *calls = (int *)context;
+    ++*calls;
+    if (strcmp(name, "foo") != 0) return 0;
+    *value = 0x1010u;
+    return 1;
+}
+
+static int allow_foo_too_high(const char *name, uint64_t *value, void *context) {
+    int *calls = (int *)context;
+    ++*calls;
+    if (strcmp(name, "foo") != 0) return 0;
+    *value = (uint64_t)UINT32_MAX + 1u;
+    return 1;
+}
+
 int main(void) {
     uint8_t file[152] = {0};
     uint8_t ram[64];
@@ -324,6 +340,89 @@ int main(void) {
         PS3_GUEST_ELF_RELOCATION_REQUIRED);
     CHECK(memory.count == 0u);
     CHECK(ram[0] == 0xa5u && ram[15] == 0xa5u);
+
+    /* End-to-end restricted dynamic RELA load: parse, resolve, stage, relocate, commit. */
+    uint8_t dynamic_elf[512] = {0};
+    uint8_t dynamic_ram[512];
+    int import_calls = 0;
+    memcpy(dynamic_elf, "\\x7f" "ELF", 4u);
+    dynamic_elf[4] = 2u; dynamic_elf[5] = 2u; dynamic_elf[6] = 1u;
+    put16(dynamic_elf + 16, 2u); put16(dynamic_elf + 18, 21u);
+    put32(dynamic_elf + 20, 1u);
+    put64(dynamic_elf + 24, 0x1000u); put64(dynamic_elf + 32, 64u);
+    put16(dynamic_elf + 52, 64u); put16(dynamic_elf + 54, 56u);
+    put16(dynamic_elf + 56, 3u);
+    /* Executable PT_LOAD: file offset 232 -> guest address 0x1000. */
+    put32(dynamic_elf + 64, 1u); put32(dynamic_elf + 68, 5u);
+    put64(dynamic_elf + 72, 232u); put64(dynamic_elf + 80, 0x1000u);
+    put64(dynamic_elf + 88, 0x1000u); put64(dynamic_elf + 96, 16u);
+    put64(dynamic_elf + 104, 16u); put64(dynamic_elf + 112, 4u);
+    /* Writable PT_LOAD: dynamic metadata, RELA, symbol and string tables. */
+    put32(dynamic_elf + 120, 1u); put32(dynamic_elf + 124, 6u);
+    put64(dynamic_elf + 128, 248u); put64(dynamic_elf + 136, 0x1080u);
+    put64(dynamic_elf + 144, 0x1080u); put64(dynamic_elf + 152, 264u);
+    put64(dynamic_elf + 160, 264u); put64(dynamic_elf + 168, 8u);
+    /* PT_DYNAMIC is intentionally the third header. */
+    put32(dynamic_elf + 176, 2u);
+    put64(dynamic_elf + 184, 248u); put64(dynamic_elf + 192, 0x1080u);
+    put64(dynamic_elf + 208, 128u); put64(dynamic_elf + 216, 128u);
+    /* DT_RELA, DT_RELASZ, DT_RELAENT, DT_SYMTAB, DT_SYMENT, DT_STRTAB, DT_STRSZ, DT_NULL. */
+    put64(dynamic_elf + 248, 7u); put64(dynamic_elf + 256, 0x1100u);
+    put64(dynamic_elf + 264, 8u); put64(dynamic_elf + 272, 24u);
+    put64(dynamic_elf + 280, 9u); put64(dynamic_elf + 288, 24u);
+    put64(dynamic_elf + 296, 6u); put64(dynamic_elf + 304, 0x1120u);
+    put64(dynamic_elf + 312, 11u); put64(dynamic_elf + 320, 24u);
+    put64(dynamic_elf + 328, 5u); put64(dynamic_elf + 336, 0x1160u);
+    put64(dynamic_elf + 344, 10u); put64(dynamic_elf + 352, 16u);
+    put64(dynamic_elf + 360, 0u); put64(dynamic_elf + 368, 0u);
+    /* RELA: target 0x10a0, symbol index 1, R_PPC64_ADDR32, addend 4. */
+    put64(dynamic_elf + 376, 0x10a0u);
+    put64(dynamic_elf + 384, (1ull << 32) | 1u);
+    put64(dynamic_elf + 392, 4u);
+    /* Symbol zero at 0x1120; symbol one at 0x1138, defined value 0x1004. */
+    put32(dynamic_elf + 432, 1u); put16(dynamic_elf + 438, 1u);
+    put64(dynamic_elf + 440, 0x1004u);
+    dynamic_elf[472] = 0u; memcpy(dynamic_elf + 473, "foo", 4u);
+    put32(dynamic_elf + 232, 0x4e800020u); /* guest code: blr */
+
+    memset(dynamic_ram, 0xa5, sizeof(dynamic_ram));
+    ps3_guest_memory_init(&memory);
+    entry = 0u;
+    CHECK(ps3_guest_elf_load_with_resolver(dynamic_elf, sizeof(dynamic_elf),
+        &memory, dynamic_ram, 0x1000u, sizeof(dynamic_ram), &entry,
+        NULL, NULL) == PS3_GUEST_ELF_OK);
+    CHECK(entry == 0x1000u && memory.count == 2u);
+    CHECK(dynamic_ram[0xa0] == 0x00u && dynamic_ram[0xa1] == 0x00u &&
+          dynamic_ram[0xa2] == 0x10u && dynamic_ram[0xa3] == 0x08u);
+
+    /* Undefined imports fail by default and must leave both RAM and maps untouched. */
+    put16(dynamic_elf + 438, 0u);
+    memset(dynamic_ram, 0xa5, sizeof(dynamic_ram));
+    ps3_guest_memory_init(&memory);
+    CHECK(ps3_guest_elf_load(dynamic_elf, sizeof(dynamic_elf), &memory,
+        dynamic_ram, 0x1000u, sizeof(dynamic_ram), &entry) ==
+        PS3_GUEST_ELF_RELOCATION_REQUIRED);
+    CHECK(memory.count == 0u && dynamic_ram[0] == 0xa5u &&
+          dynamic_ram[0xa0] == 0xa5u && dynamic_ram[511] == 0xa5u);
+
+    /* Explicitly approved imports load and relocate; out-of-range resolver results fail atomically. */
+    import_calls = 0;
+    CHECK(ps3_guest_elf_load_with_resolver(dynamic_elf, sizeof(dynamic_elf),
+        &memory, dynamic_ram, 0x1000u, sizeof(dynamic_ram), &entry,
+        allow_foo_import, &import_calls) == PS3_GUEST_ELF_OK);
+    CHECK(import_calls == 1 && memory.count == 2u);
+    CHECK(dynamic_ram[0xa0] == 0x00u && dynamic_ram[0xa1] == 0x00u &&
+          dynamic_ram[0xa2] == 0x10u && dynamic_ram[0xa3] == 0x14u);
+
+    memset(dynamic_ram, 0xa5, sizeof(dynamic_ram));
+    ps3_guest_memory_init(&memory);
+    import_calls = 0;
+    CHECK(ps3_guest_elf_load_with_resolver(dynamic_elf, sizeof(dynamic_elf),
+        &memory, dynamic_ram, 0x1000u, sizeof(dynamic_ram), &entry,
+        allow_foo_too_high, &import_calls) == PS3_GUEST_ELF_RELOCATION_REQUIRED);
+    CHECK(import_calls == 1 && memory.count == 0u &&
+          dynamic_ram[0] == 0xa5u && dynamic_ram[0xa0] == 0xa5u &&
+          dynamic_ram[511] == 0xa5u);
 
     puts("Native ELF loader and entry-point execution tests passed.");
     return 0;
