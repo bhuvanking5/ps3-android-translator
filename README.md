@@ -60,7 +60,7 @@ The CI workflow runs host tests, attempts the translated-code execution test on 
 4. Integrate the guest runner with a real memory map and a minimal runtime/system-call layer.
 5. Build out the much larger PPU/SPU, memory, OS, and RSX graphics requirements needed by a real emulator.
 
-See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md).
+See [the 48-hour plan](docs/NEXT_48_HOURS.md), [register spill design](docs/REGISTER_SPILL_DESIGN.md), and [native execution status](docs/NATIVE_EXECUTION_STATUS.md). The [tiny PowerPC64 ELF fixture instructions](docs/TINY_ELF_TEST.md) and [project progress log](docs/PROJECT_PROGRESS.md) track the controlled executable milestone.
 
 For the practical route toward real Android gameplay, see [Fastest path to PS3 gameplay](docs/FASTEST_PATH_TO_PS3_GAMEPLAY.md).
 
