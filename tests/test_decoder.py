@@ -54,6 +54,14 @@ class DecoderTests(unittest.TestCase):
         self.assertEqual(result["ra"], 6)
         self.assertEqual(result["immediate"], 0xF00)
 
+    def test_decode_addis_signed_shifted_immediate(self):
+        addis = (15 << 26) | (3 << 21) | (4 << 16) | 0xFFFE
+        result = decode_word(addis)
+        self.assertEqual(result["mnemonic"], "addis")
+        self.assertEqual(result["immediate"], -2)
+        self.assertEqual(result["rt"], 3)
+        self.assertEqual(result["ra"], 4)
+
     def test_decode_oris_and_xoris(self):
         oris = (25 << 26) | (3 << 21) | (4 << 16) | 0xABCD
         xoris = (27 << 26) | (4 << 21) | (5 << 16) | 0x00FF
