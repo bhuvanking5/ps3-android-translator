@@ -6,6 +6,7 @@
 #define ELF_HEADER_SIZE 64u
 #define ELF_PROGRAM_HEADER_SIZE 56u
 #define ELF_PT_LOAD 1u
+#define ELF_PT_DYNAMIC 2u
 #define ELF_ET_EXEC 2u
 #define ELF_EM_PPC64 21u
 #define ELF_PF_X 1u
@@ -44,8 +45,11 @@ ps3_guest_elf_status ps3_guest_elf_load(
         file[3] != 'F') return PS3_GUEST_ELF_BAD_FORMAT;
     if (file[4] != 2u || file[5] != 2u || file[6] != 1u ||
         be16(file + 18) != ELF_EM_PPC64) return PS3_GUEST_ELF_UNSUPPORTED;
-    if (be16(file + 16) != ELF_ET_EXEC || be32(file + 20) != 1u ||
-        be16(file + 52) < ELF_HEADER_SIZE) return PS3_GUEST_ELF_UNSUPPORTED;
+    const uint16_t elf_type = be16(file + 16);
+    if (be32(file + 20) != 1u || be16(file + 52) < ELF_HEADER_SIZE)
+        return PS3_GUEST_ELF_UNSUPPORTED;
+    if (elf_type == 3u) return PS3_GUEST_ELF_RELOCATION_REQUIRED;
+    if (elf_type != ELF_ET_EXEC) return PS3_GUEST_ELF_UNSUPPORTED;
 
     const uint64_t entry = be64(file + 24);
     /* PowerPC instructions are 4-byte aligned; reject malformed entry PCs. */
@@ -69,7 +73,7 @@ ps3_guest_elf_status ps3_guest_elf_load(
 
     for (uint16_t i = 0; i < phnum; ++i) {
         const uint8_t *ph = file + (size_t)(phoff + (uint64_t)i * phentsize);
-        if (be32(ph) != ELF_PT_LOAD) continue;
+        const uint32_t program_type = be32(ph);\n        if (program_type == ELF_PT_DYNAMIC) return PS3_GUEST_ELF_RELOCATION_REQUIRED;\n        if (program_type != ELF_PT_LOAD) continue;
         if (segment_count >= PS3_GUEST_MEMORY_MAX_REGIONS) {
             return PS3_GUEST_ELF_UNSUPPORTED;
         }
