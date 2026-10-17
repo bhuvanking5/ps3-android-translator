@@ -8,6 +8,7 @@ add_library(translator_bridge SHARED
   prototype_guest_io.c
   ppc_cpu.c
   guest_memory.c
+  guest_elf_loader.c
   ../../../../../native/arm64_runtime.c
   ../../../../../native/ppc_to_arm64.c
 )
