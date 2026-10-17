@@ -17,6 +17,9 @@ static uint32_t branch(int displacement, unsigned absolute, unsigned link) {
     return (18u << 26) | ((uint32_t)displacement & 0x03FFFFFCu) |
            ((absolute & 1u) << 1) | (link & 1u);
 }
+static uint32_t andi(unsigned rs, unsigned ra, unsigned imm) {
+    return (28u << 26) | (rs << 21) | (ra << 16) | (imm & 0xffffu);
+}
 static uint32_t cmpwi(unsigned bf, unsigned ra, int imm) {
     return (11u << 26) | (bf << 23) | (ra << 16) |
            ((uint32_t)imm & 0xffffu);
@@ -96,6 +99,23 @@ int main(void) {
     };
     CHECK(ppc_cpu_run(branch_if_false, 5, gpr) == PPC_CPU_OK);
     CHECK(gpr[4] == 6u); /* BO=4 branches when the selected CR bit is false */
+
+    /* ANDI sets CR0 EQ when its masked result is zero; BC consumes that bit. */
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t andi_zero_branch[] = {
+        addi(3, 0, 8), andi(3, 4, 3),
+        cond_branch(12, 2, 8), addi(5, 0, 99), addi(5, 0, 12)
+    };
+    CHECK(ppc_cpu_run(andi_zero_branch, 5, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 0u && gpr[5] == 12u);
+
+    memset(gpr, 0, sizeof(gpr));
+    const uint32_t andi_nonzero_branch[] = {
+        addi(3, 0, 7), andi(3, 4, 3),
+        cond_branch(12, 2, 8), addi(5, 0, 12), addi(5, 0, 99)
+    };
+    CHECK(ppc_cpu_run(andi_nonzero_branch, 5, gpr) == PPC_CPU_OK);
+    CHECK(gpr[4] == 3u && gpr[5] == 12u);
 
     const uint32_t unsupported_conditional[] = {
         cond_branch(16, 2, 4), addi(3, 0, 1)
