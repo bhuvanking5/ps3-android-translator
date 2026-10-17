@@ -186,6 +186,53 @@ def inspect_dynamic_elf(data: bytes) -> dict:
 
     result["relocations"]["DT_RELA"] = read_rela_table(7, 8)
     result["relocations"]["DT_JMPREL"] = read_rela_table(23, 2)
+
+    # Resolve names only for referenced dynamic-symbol entries. This is
+    # inspection, not runtime import resolution or relocation application.
+    all_relocations = result["relocations"]["DT_RELA"] + result["relocations"]["DT_JMPREL"]
+    referenced_indices = sorted({rel["symbol_index"] for rel in all_relocations if rel["symbol_index"] != 0})
+    if referenced_indices:
+        symtab = values_by_tag.get(6, [None])[0]
+        syment = values_by_tag.get(11, [None])[0]
+        if symtab is None or syment != 24:
+            raise ELFInspectionError("referenced symbols require DT_SYMTAB and DT_SYMENT=24")
+        if strtab is None or strsz is None:
+            raise ELFInspectionError("referenced symbols require DT_STRTAB and DT_STRSZ")
+        string_table = data[virtual_to_file(strtab, strsz):virtual_to_file(strtab, strsz) + strsz]
+        symbols = {}
+        for symbol_index in referenced_indices:
+            if symbol_index > (len(data) // 24):
+                raise ELFInspectionError("dynamic symbol index is outside safe file bounds")
+            symbol_address = symtab + symbol_index * 24
+            symbol_offset = virtual_to_file(symbol_address, 24)
+            name_offset = _u32(data, symbol_offset)
+            info = data[symbol_offset + 4]
+            other = data[symbol_offset + 5]
+            section_index = _u16(data, symbol_offset + 6)
+            value = _u64(data, symbol_offset + 8)
+            size = _u64(data, symbol_offset + 16)
+            if name_offset >= len(string_table):
+                raise ELFInspectionError("dynamic symbol name offset is outside DT_STRTAB")
+            name_end = string_table.find(b"\\0", name_offset)
+            if name_end < 0:
+                raise ELFInspectionError("unterminated dynamic symbol name")
+            symbols[symbol_index] = {
+                "name": string_table[name_offset:name_end].decode("utf-8", errors="replace"),
+                "binding": info >> 4,
+                "type": info & 0x0F,
+                "visibility": other & 0x03,
+                "section_index": section_index,
+                "value": value,
+                "size": size,
+                "undefined_import": section_index == 0,
+            }
+        result["referenced_symbols"] = symbols
+        for relocation in all_relocations:
+            if relocation["symbol_index"] in symbols:
+                relocation["symbol"] = symbols[relocation["symbol_index"]]["name"]
+                relocation["undefined_import"] = symbols[relocation["symbol_index"]]["undefined_import"]
+    else:
+        result["referenced_symbols"] = {}
     return result
 
 
