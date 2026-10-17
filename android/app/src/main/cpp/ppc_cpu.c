@@ -110,7 +110,7 @@ ppc_cpu_status ppc_cpu_run_with_memory(
             }
             registers[ra] = (uint64_t)(rotated & mask);
         } else if (opcode == 23u) { /* RLWNM: rotate left by low 5 bits of RB, then mask */
-            const unsigned_shift = (unsigned)(registers[rb] & 31u);
+            const unsigned unsigned_shift = (unsigned)(registers[rb] & 31u);
             const unsigned mb = (ins >> 6) & 31u;
             const unsigned me = (ins >> 1) & 31u;
             const uint32_t source = (uint32_t)registers[rt];
